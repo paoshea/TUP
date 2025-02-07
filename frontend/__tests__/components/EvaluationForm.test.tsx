@@ -38,7 +38,7 @@ describe('EvaluationForm', () => {
   it('handles notes input', () => {
     render(<EvaluationForm onSave={mockOnSave} />);
     
-    const notesInput = screen.getByPlaceholder('Add evaluation notes...') as HTMLTextAreaElement;
+    const notesInput = screen.getByPlaceholderText('Add evaluation notes...') as HTMLTextAreaElement;
     const testNote = 'Excellent muscle definition and movement';
 
     fireEvent.change(notesInput, { target: { value: testNote } });
@@ -50,7 +50,7 @@ describe('EvaluationForm', () => {
     
     // Fill out form
     const movementInput = screen.getByLabelText('Movement') as HTMLInputElement;
-    const notesInput = screen.getByPlaceholder('Add evaluation notes...') as HTMLTextAreaElement;
+    const notesInput = screen.getByPlaceholderText('Add evaluation notes...') as HTMLTextAreaElement;
 
     fireEvent.change(movementInput, { target: { value: '8' } });
     fireEvent.change(notesInput, { target: { value: 'Test notes' } });
