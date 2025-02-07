@@ -1,120 +1,152 @@
-"use client";
-
 import React, { useState } from 'react';
-import { Camera, Image as ImageIcon, X, ZoomIn } from 'lucide-react';
+import Image from 'next/image';
+import { usePhotos } from '@/hooks/usePhotos';
 
-interface Photo {
-  id: string;
-  url: string;
-  notes: string;
-  date: string;
+interface PhotoGalleryProps {
+  animalId: string;
+  photos: string[];
+  onPhotosChange?: (photos: string[]) => void;
 }
 
-export function PhotoGallery() {
-  const [photos] = useState<Photo[]>([
-    {
-      id: '1',
-      url: 'https://images.unsplash.com/photo-1484557985045-edf25e08da73?auto=format&fit=crop&w=800&q=80',
-      notes: 'Strong breed characteristics, excellent confirmation',
-      date: '2025-03-15',
-    },
-    {
-      id: '2',
-      url: 'https://images.unsplash.com/photo-1527153857715-3908f2bae5e8?auto=format&fit=crop&w=800&q=80',
-      notes: 'Good muscle development, balanced frame',
-      date: '2025-03-14',
-    }
-  ]);
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+export function PhotoGallery({ animalId, photos, onPhotosChange }: PhotoGalleryProps) {
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const { uploadPhoto, deletePhoto, uploading, error } = usePhotos(animalId);
 
-  const handlePhotoClick = (photo: Photo) => {
-    setSelectedPhoto(photo);
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files).filter(file => 
+      file.type.startsWith('image/')
+    );
+
+    if (files.length === 0) return;
+
+    try {
+      const uploadPromises = files.map(async file => {
+        const url = await uploadPhoto(file);
+        return url;
+      });
+
+      const newUrls = await Promise.all(uploadPromises);
+      const updatedPhotos = [...photos, ...newUrls];
+      onPhotosChange?.(updatedPhotos);
+    } catch (err) {
+      console.error('Failed to upload photos:', err);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+
+    try {
+      const uploadPromises = Array.from(files).map(async file => {
+        const url = await uploadPhoto(file);
+        return url;
+      });
+
+      const newUrls = await Promise.all(uploadPromises);
+      const updatedPhotos = [...photos, ...newUrls];
+      onPhotosChange?.(updatedPhotos);
+    } catch (err) {
+      console.error('Failed to upload photos:', err);
+    }
+  };
+
+  const handleDelete = async (url: string) => {
+    try {
+      await deletePhoto(url);
+      const updatedPhotos = photos.filter(p => p !== url);
+      onPhotosChange?.(updatedPhotos);
+      if (selectedPhoto === url) {
+        setSelectedPhoto(null);
+      }
+    } catch (err) {
+      console.error('Failed to delete photo:', err);
+    }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold">Photo Gallery</h2>
-        <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-          <Camera className="h-5 w-5" />
-          Add Photos
-        </button>
+    <div className="space-y-4">
+      <div
+        onDrop={handleDrop}
+        onDragOver={(e) => e.preventDefault()}
+        className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center"
+      >
+        <div className="space-y-2">
+          <p className="text-gray-600">Drag and drop photos here</p>
+          <p className="text-sm text-gray-500">or</p>
+          <label className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md cursor-pointer hover:bg-blue-700">
+            Browse Files
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+          </label>
+        </div>
       </div>
 
-      {/* Photo Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {photos.map((photo) => (
-          <div
-            key={photo.id}
-            className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer"
-            onClick={() => handlePhotoClick(photo)}
-          >
-            <img
-              src={photo.url}
-              alt={photo.notes}
-              className="object-cover w-full h-full"
-            />
-            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-opacity flex items-center justify-center">
-              <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8" />
+      {error && (
+        <div className="text-red-500 text-sm">
+          {error.message}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {photos.map((url) => (
+          <div key={url} className="relative group">
+            <div 
+              className="aspect-square relative cursor-pointer"
+              onClick={() => setSelectedPhoto(url)}
+            >
+              <Image
+                src={url}
+                alt="Animal photo"
+                fill
+                className="object-cover rounded-lg"
+                sizes="(max-width: 768px) 50vw, 25vw"
+              />
             </div>
-            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black to-transparent">
-              <p className="text-white text-sm truncate">{photo.notes}</p>
-              <p className="text-gray-300 text-xs">{new Date(photo.date).toLocaleDateString()}</p>
-            </div>
+            <button
+              onClick={() => handleDelete(url)}
+              className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              ×
+            </button>
           </div>
         ))}
       </div>
 
-      {/* Photo Modal */}
       {selectedPhoto && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold">Photo Details</h3>
-              <button
-                onClick={() => setSelectedPhoto(null)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-6 w-6" />
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="relative max-w-4xl max-h-[90vh] w-full mx-4">
+            <div className="relative aspect-square">
+              <Image
+                src={selectedPhoto}
+                alt="Selected photo"
+                fill
+                className="object-contain"
+                sizes="90vw"
+                priority
+              />
             </div>
-            <div className="p-4">
-              <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden mb-4">
-                <img
-                  src={selectedPhoto.url}
-                  alt={selectedPhoto.notes}
-                  className="object-contain w-full h-full"
-                />
-              </div>
-              <div className="space-y-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Date Taken
-                  </label>
-                  <p className="text-gray-900">
-                    {new Date(selectedPhoto.date).toLocaleDateString()}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Notes
-                  </label>
-                  <p className="text-gray-900">{selectedPhoto.notes}</p>
-                </div>
-              </div>
-            </div>
+            <button
+              onClick={() => setSelectedPhoto(null)}
+              className="absolute top-4 right-4 p-2 bg-white text-black rounded-full"
+            >
+              ×
+            </button>
           </div>
         </div>
       )}
 
-      {/* Empty State */}
-      {photos.length === 0 && (
-        <div className="text-center py-12">
-          <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No photos</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Get started by adding some photos.
-          </p>
+      {uploading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg">
+            <p>Uploading photos...</p>
+          </div>
         </div>
       )}
     </div>

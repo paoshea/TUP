@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '../../utils/test-utils';
-import { FlockAnalyzer } from '../../components/FlockAnalyzer';
+import { render, screen, fireEvent } from '@/utils/test-utils';
+import { FlockAnalyzer } from '@/components/FlockAnalyzer';
 import '@testing-library/jest-dom';
 
 describe('FlockAnalyzer', () => {

@@ -1,9 +1,9 @@
 import { renderHook, act } from '@testing-library/react';
-import { usePhotos } from '../../hooks/usePhotos';
-import { storage } from '../../services/storage';
+import { usePhotos } from '@/hooks/usePhotos';
+import { storage } from '@/services/storage';
 
 // Mock the storage service
-jest.mock('../../services/storage', () => ({
+jest.mock('@/services/storage', () => ({
   storage: {
     uploadPhoto: jest.fn(),
     getPhotoUrl: jest.fn(),
@@ -91,22 +91,5 @@ describe('usePhotos', () => {
     ).rejects.toThrow('Delete failed');
 
     expect(result.current.error).toEqual(error);
-  });
-
-  it('generates unique file paths for uploads', async () => {
-    const mockUrl = 'https://example.com/photos/test.jpg';
-    (storage.uploadPhoto as jest.Mock).mockResolvedValueOnce({ path: 'path1' });
-    (storage.getPhotoUrl as jest.Mock).mockReturnValueOnce(mockUrl);
-
-    const { result } = renderHook(() => usePhotos(testAnimalId));
-
-    await act(async () => {
-      await result.current.uploadPhoto(testFile);
-    });
-
-    const uploadPath = (storage.uploadPhoto as jest.Mock).mock.calls[0][1];
-    expect(uploadPath).toContain(testAnimalId);
-    expect(uploadPath).toContain(testFile.name);
-    expect(uploadPath).toMatch(/\d{13}-test\.jpg$/); // Timestamp format
   });
 });

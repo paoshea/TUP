@@ -1,9 +1,9 @@
 import { renderHook, act } from '@testing-library/react';
-import { useAI } from '../../hooks/useAI';
-import { ai } from '../../services/ai';
+import { useAI } from '@/hooks/useAI';
+import { ai } from '@/services/ai';
 
 // Mock the AI service
-jest.mock('../../services/ai', () => ({
+jest.mock('@/services/ai', () => ({
   ai: {
     analyzeAnimal: jest.fn(),
     getRecommendations: jest.fn(),

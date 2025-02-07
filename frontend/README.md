@@ -1,36 +1,122 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LiveStock Show Assistant Frontend
 
-## Getting Started
+A Next.js application for livestock show management with MongoDB integration.
 
-First, run the development server:
+## Features
 
+- Authentication with JWT and MongoDB
+- Real-time livestock data management
+- Photo management with GridFS
+- AI-powered analysis and recommendations
+- Dark/Light theme support
+- Responsive design
+
+## Prerequisites
+
+- Node.js 18+
+- MongoDB 6.0+
+- npm or yarn
+
+## Setup
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd frontend
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables:
+```bash
+cp .env.local.example .env.local
+```
+Then edit `.env.local` with your configuration:
+- `MONGODB_URI`: Your MongoDB connection string
+- `JWT_SECRET`: Secret key for JWT authentication
+- `NEXT_PUBLIC_API_URL`: API endpoint URL
+- `NODE_ENV`: Environment (development/production)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Run the development server:
+```bash
+npm run dev
+```
 
-## Learn More
+5. Build for production:
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Testing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Run the test suite:
+```bash
+npm test
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Run tests with coverage:
+```bash
+npm test -- --coverage
+```
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+frontend/
+├── app/                 # Next.js app router
+├── components/         # React components
+├── context/           # Context providers
+├── hooks/             # Custom hooks
+├── services/          # API services
+├── types/             # TypeScript types
+├── utils/             # Utility functions
+└── __tests__/         # Test files
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## MongoDB Integration
+
+The application uses MongoDB for:
+- User authentication
+- Livestock data storage
+- Photo storage (GridFS)
+- Analytics and historical data
+
+Key services:
+- `api.ts`: CRUD operations
+- `storage.ts`: Photo management with GridFS
+- `ai.ts`: AI analysis with MongoDB aggregation
+
+## Available Scripts
+
+- `npm run dev`: Start development server
+- `npm run build`: Build for production
+- `npm start`: Start production server
+- `npm test`: Run tests
+- `npm run lint`: Run ESLint
+- `npm run type-check`: Run TypeScript compiler
+
+## Environment Variables
+
+Required environment variables:
+
+```env
+MONGODB_URI=mongodb://localhost:27017/livestock
+JWT_SECRET=your-secret-key-here
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NODE_ENV=development
+```
+
+## Contributing
+
+1. Create a feature branch
+2. Make your changes
+3. Run tests
+4. Submit a pull request
+
+## License
+
+MIT

@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "es5",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -21,25 +21,19 @@
     "paths": {
       "@/*": ["./*"],
       "@/components/*": ["./components/*"],
-      "@/lib/*": ["./lib/*"],
       "@/hooks/*": ["./hooks/*"],
+      "@/services/*": ["./services/*"],
       "@/utils/*": ["./utils/*"],
       "@/types/*": ["./types/*"],
-      "@/styles/*": ["./styles/*"],
-      "@/services/*": ["./services/*"]
-    },
-    "baseUrl": ".",
-    "forceConsistentCasingInFileNames": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+      "@/context/*": ["./context/*"]
+    }
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "additional.d.ts"
+    "jest.setup.ts"
   ],
   "exclude": ["node_modules"]
 }

@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '../../utils/test-utils';
-import { EvaluationForm } from '../../components/EvaluationForm';
+import { render, screen, fireEvent } from '@/utils/test-utils';
+import { EvaluationForm } from '@/components/EvaluationForm';
 import '@testing-library/jest-dom';
 
 describe('EvaluationForm', () => {
