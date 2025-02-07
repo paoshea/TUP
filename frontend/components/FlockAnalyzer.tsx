@@ -1,163 +1,117 @@
-"use client";
-
 import React, { useState } from 'react';
-import { Award, AlertCircle, LineChart, Dna, Crown, Check, TrendingUp, History, Users } from 'lucide-react';
+import { useAI } from '@/hooks/useAI';
 
-const historicalFlocks = [
-  {
-    id: 1,
-    name: "Queen Mother's Caithness Flock",
-    established: 1952,
-    achievements: [
-      "Supreme Champion Highland Show 1965, 1967",
-      "Best Group of Three 1964-1968"
-    ],
-    notableTraits: "Exceptional breed character, strong maternal lines",
-    showPerformance: 95,
-    regions: ["Caithness", "Sutherland"],
-    keyMetrics: {
-      breedingSuccess: 92,
-      woolQuality: 88,
-      conformationScore: 94
-    }
-  }
-];
+interface FlockAnalyzerProps {
+  onAnimalSelect?: (animalId: string | null) => void;
+}
 
-export function FlockAnalyzer() {
-  const [selectedFlock, setSelectedFlock] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState('historical');
-  const [showAnalysis, setShowAnalysis] = useState(false);
+export function FlockAnalyzer({ onAnimalSelect }: FlockAnalyzerProps) {
+  const [selectedFlock, setSelectedFlock] = useState<string | null>(null);
+  const [view, setView] = useState<'historical' | 'analysis'>('historical');
+  const { loading, error } = useAI();
 
-  const handleFlockSelect = (id: number) => {
-    setSelectedFlock(id);
-    setShowAnalysis(true);
-  };
-
-  const renderHistoricalData = () => {
-    const flock = historicalFlocks.find(f => f.id === selectedFlock);
-    if (!flock) return null;
-
-    return (
-      <div className="space-y-6 p-6 bg-white rounded-lg shadow-md">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold flex items-center gap-2">
-            <Crown className="text-yellow-500" />
-            {flock.name}
-          </h3>
-          <span className="text-gray-500">Est. {flock.established}</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h4 className="font-semibold mb-2 flex items-center gap-2">
-              <Award className="text-blue-500" />
-              Achievements
-            </h4>
-            <ul className="space-y-2">
-              {flock.achievements.map((achievement, index) => (
-                <li key={index} className="flex items-center gap-2">
-                  <Check className="text-green-500" size={16} />
-                  {achievement}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-2 flex items-center gap-2">
-              <Dna className="text-purple-500" />
-              Notable Traits
-            </h4>
-            <p className="text-gray-700">{flock.notableTraits}</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="text-blue-500" />
-              <span className="font-semibold">Show Performance</span>
-            </div>
-            <div className="text-2xl font-bold text-blue-600">{flock.showPerformance}%</div>
-          </div>
-
-          <div className="p-4 bg-green-50 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="text-green-500" />
-              <span className="font-semibold">Breeding Success</span>
-            </div>
-            <div className="text-2xl font-bold text-green-600">{flock.keyMetrics.breedingSuccess}%</div>
-          </div>
-
-          <div className="p-4 bg-purple-50 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <LineChart className="text-purple-500" />
-              <span className="font-semibold">Conformation</span>
-            </div>
-            <div className="text-2xl font-bold text-purple-600">{flock.keyMetrics.conformationScore}%</div>
-          </div>
-        </div>
-      </div>
-    );
+  const handleFlockSelect = (flockName: string) => {
+    setSelectedFlock(flockName);
+    // In a real app, we would get the actual animal ID
+    onAnimalSelect?.('sample-animal-id');
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Flock Analysis</h2>
-        <div className="flex gap-2">
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('historical')}
-            className={`px-4 py-2 rounded-lg ${
-              activeTab === 'historical'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            onClick={() => setView('historical')}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm
+              ${
+                view === 'historical'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
           >
-            <History className="inline-block mr-2" size={18} />
             Historical Data
           </button>
           <button
-            onClick={() => setActiveTab('analysis')}
-            className={`px-4 py-2 rounded-lg ${
-              activeTab === 'analysis'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            onClick={() => setView('analysis')}
+            className={`
+              py-4 px-1 border-b-2 font-medium text-sm
+              ${
+                view === 'analysis'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
           >
-            <LineChart className="inline-block mr-2" size={18} />
             Analysis
           </button>
-        </div>
+        </nav>
       </div>
 
-      {activeTab === 'historical' && (
-        <div className="grid grid-cols-1 gap-4">
-          {historicalFlocks.map(flock => (
-            <button
-              key={flock.id}
-              onClick={() => handleFlockSelect(flock.id)}
-              className="text-left p-4 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">{flock.name}</h3>
-                <span className="text-gray-500">Est. {flock.established}</span>
-              </div>
-              <div className="mt-2 text-gray-600">
-                Regions: {flock.regions.join(', ')}
-              </div>
-            </button>
-          ))}
+      {loading && (
+        <div className="text-center py-4">
+          <p className="text-gray-500">Loading...</p>
         </div>
       )}
 
-      {showAnalysis && renderHistoricalData()}
+      {error && (
+        <div className="text-center py-4">
+          <p className="text-red-500">{error.message}</p>
+        </div>
+      )}
 
-      {activeTab === 'analysis' && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertCircle className="text-yellow-500" />
-            <p className="text-gray-600">Select a flock from the historical data to view detailed analysis.</p>
+      {view === 'historical' ? (
+        <div className="space-y-4">
+          <div
+            className={`
+              p-4 border rounded-lg cursor-pointer
+              ${
+                selectedFlock === "Queen Mother&apos;s Caithness Flock"
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-blue-300'
+              }
+            `}
+            onClick={() => handleFlockSelect("Queen Mother&apos;s Caithness Flock")}
+          >
+            <h3 className="text-lg font-semibold">Queen Mother&apos;s Caithness Flock</h3>
+            {selectedFlock === "Queen Mother&apos;s Caithness Flock" && (
+              <div className="mt-4 space-y-2">
+                <p className="text-sm text-gray-600">Est. 1952</p>
+                <p className="text-sm text-gray-600">Show Performance: 95%</p>
+                <div className="mt-4">
+                  <h4 className="font-medium">Notable Traits</h4>
+                  <p className="text-sm text-gray-600">
+                    Exceptional breed character, strong maternal lines
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-4">
+          <p className="text-gray-500">
+            Select a flock from the historical data to view detailed analysis.
+          </p>
+        </div>
+      )}
+
+      {selectedFlock && view === 'historical' && (
+        <div className="mt-8 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 className="font-medium mb-2">Breeding Success</h4>
+              <p className="text-2xl font-bold text-blue-600">92%</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 className="font-medium mb-2">Conformation</h4>
+              <p className="text-2xl font-bold text-blue-600">94%</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <h4 className="font-medium mb-2">Wool Quality</h4>
+              <p className="text-2xl font-bold text-blue-600">88%</p>
+            </div>
           </div>
         </div>
       )}

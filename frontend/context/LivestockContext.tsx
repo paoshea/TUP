@@ -1,25 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { clientPromise, ObjectId } from '../services/mongodb';
 import type { Animal } from '../types';
-import { Document } from 'mongodb';
-
-interface AnimalDocument extends Document {
-  name: string;
-  category: string;
-  breed: string;
-  region: string;
-  scores: {
-    movement: number;
-    conformation: number;
-    muscleDevelopment: number;
-    breedCharacteristics: number;
-  };
-  notes: string;
-  images: string[];
-  createdAt: Date;
-}
 
 interface LivestockContextType {
   animals: Animal[];
@@ -32,17 +14,6 @@ interface LivestockContextType {
 
 const LivestockContext = createContext<LivestockContextType | undefined>(undefined);
 
-const mapDocumentToAnimal = (doc: AnimalDocument): Animal => ({
-  id: doc._id.toString(),
-  name: doc.name,
-  category: doc.category,
-  breed: doc.breed,
-  region: doc.region,
-  scores: doc.scores,
-  notes: doc.notes,
-  images: doc.images,
-});
-
 export function LivestockProvider({ children }: { children: React.ReactNode }) {
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,17 +25,14 @@ export function LivestockProvider({ children }: { children: React.ReactNode }) {
 
   const fetchAnimals = async () => {
     try {
-      const client = await clientPromise;
-      const db = client.db();
-      const data = await db
-        .collection<AnimalDocument>('animals')
-        .find({})
-        .sort({ createdAt: -1 })
-        .toArray();
-
-      setAnimals(data.map(mapDocumentToAnimal));
+      const response = await fetch('/api/animals');
+      if (!response.ok) {
+        throw new Error('Failed to fetch animals');
+      }
+      const data = await response.json();
+      setAnimals(data);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch animals'));
+      setError(err instanceof Error ? err : new Error('Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -72,48 +40,53 @@ export function LivestockProvider({ children }: { children: React.ReactNode }) {
 
   const addAnimal = async (animal: Omit<Animal, 'id'>) => {
     try {
-      const client = await clientPromise;
-      const db = client.db();
-      const result = await db
-        .collection<AnimalDocument>('animals')
-        .insertOne({
-          ...animal,
-          createdAt: new Date(),
-        } as AnimalDocument);
+      setLoading(true);
+      const response = await fetch('/api/animals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(animal),
+      });
 
-      const newAnimal: Animal = {
-        id: result.insertedId.toString(),
-        ...animal,
-      };
+      if (!response.ok) {
+        throw new Error('Failed to create animal');
+      }
 
+      const newAnimal = await response.json();
       setAnimals(prev => [newAnimal, ...prev]);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to add animal'));
       throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
   const updateAnimal = async (id: string, updates: Partial<Animal>) => {
     try {
-      const client = await clientPromise;
-      const db = client.db();
-      const result = await db
-        .collection<AnimalDocument>('animals')
-        .findOneAndUpdate(
-          { _id: new ObjectId(id) },
-          { $set: updates },
-          { returnDocument: 'after' }
-        );
+      setLoading(true);
+      const response = await fetch(`/api/animals?id=${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
 
-      if (!result) throw new Error('Animal not found');
+      if (!response.ok) {
+        throw new Error('Failed to update animal');
+      }
 
-      const updatedAnimal = mapDocumentToAnimal(result);
+      const updatedAnimal = await response.json();
       setAnimals(prev =>
         prev.map(animal => (animal.id === id ? updatedAnimal : animal))
       );
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to update animal'));
       throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
