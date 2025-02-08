@@ -1,82 +1,61 @@
 import mongoose from 'mongoose';
 import { config } from '../config';
 
-const MONGODB_URI = config.mongodb.uri;
+/**
+ * Connect to MongoDB database
+ */
+export const connectDatabase = async (): Promise<void> => {
+  try {
+    await mongoose.connect(config.mongodb.uri, config.mongodb.options);
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable');
-}
+    // Log successful connection
+    mongoose.connection.on('connected', () => {
+      console.log('MongoDB connected successfully');
+    });
 
-interface MongooseCache {
-  conn: typeof mongoose | null;
-  promise: Promise<typeof mongoose> | null;
-}
+    // Log connection errors
+    mongoose.connection.on('error', (error) => {
+      console.error('MongoDB connection error:', error);
+    });
+
+    // Log disconnection
+    mongoose.connection.on('disconnected', () => {
+      console.log('MongoDB disconnected');
+    });
+
+    // Handle process termination
+    process.on('SIGINT', async () => {
+      try {
+        await mongoose.connection.close();
+        console.log('MongoDB connection closed through app termination');
+        process.exit(0);
+      } catch (error) {
+        console.error('Error closing MongoDB connection:', error);
+        process.exit(1);
+      }
+    });
+  } catch (error) {
+    console.error('Failed to connect to MongoDB:', error);
+    throw error;
+  }
+};
 
 /**
- * Global is used here to maintain a cached connection across hot reloads
- * in development. This prevents connections growing exponentially
- * during API Route usage.
+ * Get the current database connection
  */
-let cached: MongooseCache = (global as any).mongoose;
+export const getConnection = (): mongoose.Connection => {
+  return mongoose.connection;
+};
 
-if (!cached) {
-  cached = (global as any).mongoose = { conn: null, promise: null };
-}
-
-export async function connectToDatabase(): Promise<typeof mongoose> {
-  if (cached.conn) {
-    return cached.conn;
-  }
-
-  if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-      maxPoolSize: config.mongodb.options.maxPoolSize,
-    };
-
-    mongoose.set('strictQuery', true);
-
-    cached.promise = mongoose.connect(MONGODB_URI, opts);
-  }
-
+/**
+ * Close the database connection
+ */
+export const closeConnection = async (): Promise<void> => {
   try {
-    cached.conn = await cached.promise;
-  } catch (e) {
-    cached.promise = null;
-    throw e;
+    await mongoose.connection.close();
+    console.log('MongoDB connection closed');
+  } catch (error) {
+    console.error('Error closing MongoDB connection:', error);
+    throw error;
   }
-
-  return cached.conn;
-}
-
-export async function disconnectFromDatabase(): Promise<void> {
-  if (cached.conn) {
-    await mongoose.disconnect();
-    cached.conn = null;
-    cached.promise = null;
-  }
-}
-
-// Event handlers
-mongoose.connection.on('connected', () => {
-  console.log('MongoDB connected successfully');
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('MongoDB connection error:', err);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected');
-});
-
-// Handle process termination
-process.on('SIGINT', async () => {
-  await disconnectFromDatabase();
-  process.exit(0);
-});
-
-declare global {
-  // eslint-disable-next-line no-var
-  var mongoose: MongooseCache | undefined;
-}
+};

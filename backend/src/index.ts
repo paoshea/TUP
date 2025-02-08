@@ -1,72 +1,74 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
 import { config } from './config';
-import { connectToDatabase } from './utils/database';
-
-// Import middleware
-import { errorHandler } from './middleware/errorHandler';
-import { requestLogger } from './middleware/requestLogger';
-import { authenticate } from './middleware/authenticate';
-
-// Import routes
-import { authRoutes } from './routes/auth';
-import { animalRoutes } from './routes/animals';
-import { evaluationRoutes } from './routes/evaluations';
-import { showRoutes } from './routes/shows';
-import { syncRoutes } from './routes/sync';
-import { notificationRoutes } from './routes/notifications';
+import { connectDatabase } from './utils/database';
+import { errorHandler } from './middleware';
+import routes from './routes';
 
 const app = express();
 
-// Connect to MongoDB
-connectToDatabase()
-  .then(() => {
-    console.log('Connected to MongoDB');
-  })
-  .catch((error) => {
-    console.error('MongoDB connection error:', error);
-    process.exit(1);
-  });
-
-// Middleware
+// Security middleware
+app.use(helmet());
 app.use(cors({
   origin: config.cors.origin,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }));
+
+// Request parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(requestLogger);
 
-// Public routes
-app.use('/api/auth', authRoutes);
+// Compression and logging
+app.use(compression());
+if (config.env !== 'test') {
+  app.use(morgan('dev'));
+}
 
-// Protected routes
-app.use('/api/animals', authenticate, animalRoutes);
-app.use('/api/evaluations', authenticate, evaluationRoutes);
-app.use('/api/shows', authenticate, showRoutes);
-app.use('/api/sync', authenticate, syncRoutes);
-app.use('/api/notifications', authenticate, notificationRoutes);
+// API routes
+app.use('/api', routes);
 
 // Error handling
 app.use(errorHandler);
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
 // Start server
-const server = app.listen(config.port, () => {
-  console.log(`Server running on port ${config.port} in ${config.env} mode`);
+const startServer = async () => {
+  try {
+    // Connect to database
+    await connectDatabase();
+    console.log('Connected to database');
+
+    // Start listening
+    const port = config.port;
+    app.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+      console.log(`Environment: ${config.env}`);
+      console.log(`MongoDB URI: ${config.mongodb.uri}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
 });
 
-// Handle shutdown gracefully
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
-  });
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled Rejection:', error);
+  process.exit(1);
 });
+
+// Start application
+if (require.main === module) {
+  startServer();
+}
 
 export default app;

@@ -6,6 +6,7 @@ import { animalService } from './AnimalService';
 import type { IShow } from '../models/Show';
 import type { IShowEntry } from '../models/ShowEntry';
 import type { IShowResult } from '../models/ShowResult';
+import type { IAnimal } from '../models/Animal';
 
 interface ShowStats {
   totalEntries: number;
@@ -22,14 +23,9 @@ interface ShowStats {
   }>;
 }
 
-interface PopulatedAnimal {
-  _id: Types.ObjectId;
-  name: string;
-}
-
-interface PopulatedShowEntry extends IShowEntry {
-  animal: PopulatedAnimal;
-}
+type PopulatedShowEntry = Omit<IShowEntry, 'animal'> & {
+  animal: Pick<IAnimal, '_id' | 'name'>;
+};
 
 export class ShowService extends BaseService<IShow> {
   constructor() {
@@ -178,11 +174,18 @@ export class ShowService extends BaseService<IShow> {
   /**
    * Get entries for a show
    */
-  async getShowEntries(showId: string): Promise<IShowEntry[]> {
-    return ShowEntry.find({ show: new Types.ObjectId(showId) })
-      .populate(['animal', 'owner'])
-      .sort('entry_number')
-      .exec();
+  async getShowEntries(showId: string): Promise<PopulatedShowEntry[]> {
+    try {
+      const entries = await ShowEntry.find({ show: new Types.ObjectId(showId) })
+        .populate<{ animal: Pick<IAnimal, '_id' | 'name'> }>('animal', '_id name')
+        .populate('owner')
+        .sort('entry_number')
+        .exec();
+
+      return entries as PopulatedShowEntry[];
+    } catch (error) {
+      throw new ApiError(500, 'DATABASE_ERROR', 'Failed to fetch show entries');
+    }
   }
 
   /**
@@ -221,8 +224,8 @@ export class ShowService extends BaseService<IShow> {
     }
 
     const entries = await ShowEntry.find({ show: show._id })
-      .populate<{ animal: PopulatedAnimal }>('animal')
-      .exec();
+      .populate<{ animal: Pick<IAnimal, '_id' | 'name'> }>('animal', '_id name')
+      .exec() as PopulatedShowEntry[];
 
     const results = await ShowResult.find({
       entry: { $in: entries.map(e => e._id) },
@@ -243,21 +246,22 @@ export class ShowService extends BaseService<IShow> {
     // Calculate results by category
     show.categories.forEach(category => {
       const categoryEntries = entries.filter(e => e.category === category.name);
-      const categoryResults = results.filter(r => 
+      const validResults = results.filter(r => 
+        r.placement != null && 
+        r.points != null && 
         categoryEntries.some(e => e._id.equals(r.entry))
       );
 
-      const topPlacements = categoryResults
-        .filter(result => result.placement != null && result.points != null)
-        .sort((a, b) => a.placement - b.placement)
+      const topPlacements = validResults
+        .sort((a, b) => (a.placement as number) - (b.placement as number))
         .slice(0, 3)
         .map(result => {
           const entry = categoryEntries.find(e => e._id.equals(result.entry))!;
           return {
             entry_number: entry.entry_number,
             animal_name: entry.animal.name,
-            placement: result.placement,
-            points: result.points,
+            placement: result.placement as number,
+            points: result.points as number,
           };
         });
 

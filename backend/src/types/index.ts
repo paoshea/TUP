@@ -1,17 +1,14 @@
 import { Request } from 'express';
-import { Types } from 'mongoose';
 
 // Auth types
-export interface JwtPayload {
-  userId: string;
+export interface AuthUser {
+  id: string;
   email: string;
+  role?: 'user' | 'admin';
 }
 
-export interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-  };
+export interface RequestWithUser extends Request {
+  user?: AuthUser;
 }
 
 // API Response types
@@ -25,36 +22,7 @@ export interface ApiResponse<T = any> {
   };
 }
 
-// Sync types
-export type SyncOperation = 'insert' | 'update' | 'delete';
-export type SyncStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'conflict';
-export type ConflictResolution = 'client_wins' | 'server_wins' | 'manual';
-
-// Push notification types
-export type NotificationType = 'evaluation' | 'show' | 'sync' | 'system';
-export type NotificationStatus = 'pending' | 'sent' | 'failed';
-export type Platform = 'ios' | 'android' | 'web';
-
-// Utility types
-export type MongoId = Types.ObjectId | string;
-
-// Generic types
-export type Nullable<T> = T | null;
-export type Optional<T> = T | undefined;
-export type WithId<T> = T & { _id: Types.ObjectId };
-export type WithTimestamps<T> = T & {
-  created_at: Date;
-  updated_at?: Date;
-};
-
-// Error types
-export interface AppError extends Error {
-  status?: number;
-  code?: string;
-  details?: any;
-}
-
-// Query types
+// Pagination types
 export interface PaginationOptions {
   page?: number;
   limit?: number;
@@ -66,13 +34,6 @@ export interface FilterOptions {
   [key: string]: any;
 }
 
-export interface QueryOptions extends PaginationOptions {
-  filters?: FilterOptions;
-  populate?: string[];
-  select?: string[];
-}
-
-// Response types
 export interface PaginatedResponse<T> {
   items: T[];
   total: number;
@@ -81,11 +42,25 @@ export interface PaginatedResponse<T> {
   pages: number;
 }
 
+// Query types
+export interface QueryOptions extends PaginationOptions {
+  filters?: FilterOptions;
+  populate?: string[];
+  select?: string[];
+}
+
 // Service types
 export interface ServiceOptions {
   session?: any;
-  user?: {
-    id: string;
-    email: string;
-  };
+  user?: AuthUser;
+}
+
+// File types
+export interface UploadedFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  buffer: Buffer;
+  size: number;
 }
