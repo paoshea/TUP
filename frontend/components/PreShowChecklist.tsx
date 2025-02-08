@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useState } from 'react';
-import { CheckSquare, Square, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { Card, CardHeader, CardContent, CardFooter } from './ui/card';
+import { Input } from './ui/input';
+import { Button } from './ui/button';
+import { Progress } from './ui/progress';
+import { Checkbox } from './ui/checkbox';
+import { Form, FormControl, FormField, FormItem } from './ui/form';
+import { cn } from '@/lib/utils';
 
 interface ChecklistItem {
   id: string;
@@ -9,122 +17,133 @@ interface ChecklistItem {
   completed: boolean;
 }
 
+interface NewItemFormData {
+  text: string;
+}
+
+const defaultItems: ChecklistItem[] = [
+  { id: '1', text: 'Review breed standards', completed: false },
+  { id: '2', text: 'Prepare evaluation sheets', completed: false },
+  { id: '3', text: 'Check show schedule', completed: false },
+];
+
 export function PreShowChecklist() {
-  const [items, setItems] = useState<ChecklistItem[]>([
-    { id: '1', text: 'Review breed standards', completed: false },
-    { id: '2', text: 'Prepare evaluation sheets', completed: false },
-    { id: '3', text: 'Check show schedule', completed: false },
-  ]);
-  const [newItemText, setNewItemText] = useState('');
+  const [items, setItems] = useState<ChecklistItem[]>(defaultItems);
+
+  const form = useForm<NewItemFormData>({
+    defaultValues: {
+      text: '',
+    },
+  });
 
   const handleToggle = (id: string) => {
-    setItems(items.map(item =>
-      item.id === id ? { ...item, completed: !item.completed } : item
-    ));
+    setItems(prevItems =>
+      prevItems.map(item =>
+        item.id === id ? { ...item, completed: !item.completed } : item
+      )
+    );
   };
 
-  const handleAddItem = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newItemText.trim()) return;
+  const handleAddItem = (data: NewItemFormData) => {
+    if (!data.text.trim()) return;
 
     const newItem: ChecklistItem = {
       id: Date.now().toString(),
-      text: newItemText.trim(),
+      text: data.text.trim(),
       completed: false,
     };
 
-    setItems([...items, newItem]);
-    setNewItemText('');
+    setItems(prevItems => [...prevItems, newItem]);
+    form.reset();
   };
 
   const handleDeleteItem = (id: string) => {
-    setItems(items.filter(item => item.id !== id));
+    setItems(prevItems => prevItems.filter(item => item.id !== id));
   };
 
+  const completedCount = items.filter(item => item.completed).length;
+  const progress = items.length > 0 ? (completedCount / items.length) * 100 : 0;
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold mb-6">Pre-Show Checklist</h2>
+    <Card>
+      <CardHeader>
+        <h2 className="text-xl font-semibold">Pre-Show Checklist</h2>
+      </CardHeader>
 
-      {/* Add new item form */}
-      <form onSubmit={handleAddItem} className="mb-6">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newItemText}
-            onChange={(e) => setNewItemText(e.target.value)}
-            placeholder="Add new checklist item..."
-            className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="h-5 w-5" />
-          </button>
-        </div>
-      </form>
+      <CardContent className="space-y-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleAddItem)} className="flex gap-2">
+            <FormField
+              control={form.control}
+              name="text"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormControl>
+                    <Input
+                      placeholder="Add new checklist item..."
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <Button type="submit" size="icon">
+              <Plus className="h-4 w-4" />
+              <span className="sr-only">Add item</span>
+            </Button>
+          </form>
+        </Form>
 
-      {/* Checklist items */}
-      <div className="space-y-3">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className={`flex items-center justify-between p-3 rounded-lg ${
-              item.completed ? 'bg-green-50' : 'bg-gray-50'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => handleToggle(item.id)}
-                className={`text-${item.completed ? 'green' : 'gray'}-600 hover:text-${
-                  item.completed ? 'green' : 'gray'
-                }-700`}
-              >
-                {item.completed ? (
-                  <CheckSquare className="h-5 w-5" />
-                ) : (
-                  <Square className="h-5 w-5" />
-                )}
-              </button>
-              <span
-                className={`${
-                  item.completed
-                    ? 'text-green-600 line-through'
-                    : 'text-gray-700'
-                }`}
-              >
-                {item.text}
-              </span>
-            </div>
-            <button
-              onClick={() => handleDeleteItem(item.id)}
-              className="text-gray-400 hover:text-red-500 transition-colors"
+        <div className="space-y-2">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className={cn(
+                'flex items-center justify-between p-2 rounded-lg',
+                item.completed ? 'bg-muted/50' : 'bg-background'
+              )}
             >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-      </div>
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id={`item-${item.id}`}
+                  checked={item.completed}
+                  onCheckedChange={() => handleToggle(item.id)}
+                />
+                <label
+                  htmlFor={`item-${item.id}`}
+                  className={cn(
+                    'text-sm',
+                    item.completed && 'text-muted-foreground line-through'
+                  )}
+                >
+                  {item.text}
+                </label>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleDeleteItem(item.id)}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">Delete item</span>
+              </Button>
+            </div>
+          ))}
+        </div>
+      </CardContent>
 
-      {/* Progress summary */}
       {items.length > 0 && (
-        <div className="mt-6 pt-6 border-t">
-          <div className="flex items-center justify-between text-sm text-gray-600">
+        <CardFooter className="flex flex-col gap-2">
+          <div className="flex items-center justify-between w-full text-sm text-muted-foreground">
             <span>Progress</span>
             <span>
-              {items.filter(item => item.completed).length} of {items.length} completed
+              {completedCount} of {items.length} completed
             </span>
           </div>
-          <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-green-500 transition-all duration-300"
-              style={{
-                width: `${(items.filter(item => item.completed).length / items.length) * 100}%`
-              }}
-            />
-          </div>
-        </div>
+          <Progress value={progress} className="w-full" />
+        </CardFooter>
       )}
-    </div>
+    </Card>
   );
 }

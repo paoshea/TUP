@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { usePhotos } from '@/hooks/usePhotos';
+import { ImagePlus, X, Loader2 } from 'lucide-react';
+import { Card, CardContent } from './ui/card';
+import { Button } from './ui/button';
+import { Dialog, DialogContent } from './ui/dialog';
+import { Alert, AlertDescription } from './ui/alert';
+import { cn } from '@/lib/utils';
 
 interface PhotoGalleryProps {
   animalId: string;
@@ -67,62 +73,77 @@ export function PhotoGallery({ animalId, photos, onPhotosChange }: PhotoGalleryP
 
   return (
     <div className="space-y-4">
-      <div
-        onDrop={handleDrop}
-        onDragOver={(e) => e.preventDefault()}
-        className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center"
-      >
-        <div className="space-y-2">
-          <p className="text-gray-600">Drag and drop photos here</p>
-          <p className="text-sm text-gray-500">or</p>
-          <label className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md cursor-pointer hover:bg-blue-700">
-            Browse Files
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-          </label>
-        </div>
-      </div>
+      <Card>
+        <CardContent>
+          <div
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+            className={cn(
+              'flex flex-col items-center justify-center gap-4 p-8 text-center',
+              'border-2 border-dashed border-muted rounded-lg',
+              'transition-colors duration-200',
+              'hover:border-primary/50'
+            )}
+          >
+            <ImagePlus className="h-8 w-8 text-muted-foreground" />
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Drag and drop photos here</p>
+              <p className="text-xs text-muted-foreground">or</p>
+              <Button variant="secondary" asChild>
+                <label className="cursor-pointer">
+                  Browse Files
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                </label>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {error && (
-        <div className="text-red-500 text-sm">
-          {error.message}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {photos.map((url) => (
           <div key={url} className="relative group">
             <div 
-              className="aspect-square relative cursor-pointer"
+              className="aspect-square relative cursor-pointer rounded-lg overflow-hidden"
               onClick={() => setSelectedPhoto(url)}
             >
               <Image
                 src={url}
                 alt="Animal photo"
                 fill
-                className="object-cover rounded-lg"
+                className="object-cover transition-transform group-hover:scale-105"
                 sizes="(max-width: 768px) 50vw, 25vw"
               />
             </div>
-            <button
+            <Button
+              variant="destructive"
+              size="icon"
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={() => handleDelete(url)}
-              className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
             >
-              ×
-            </button>
+              <X className="h-4 w-4" />
+              <span className="sr-only">Delete photo</span>
+            </Button>
           </div>
         ))}
       </div>
 
-      {selectedPhoto && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="relative max-w-4xl max-h-[90vh] w-full mx-4">
-            <div className="relative aspect-square">
+      <Dialog open={selectedPhoto !== null} onOpenChange={() => setSelectedPhoto(null)}>
+        <DialogContent className="max-w-4xl">
+          <div className="relative aspect-square">
+            {selectedPhoto && (
               <Image
                 src={selectedPhoto}
                 alt="Selected photo"
@@ -131,21 +152,16 @@ export function PhotoGallery({ animalId, photos, onPhotosChange }: PhotoGalleryP
                 sizes="90vw"
                 priority
               />
-            </div>
-            <button
-              onClick={() => setSelectedPhoto(null)}
-              className="absolute top-4 right-4 p-2 bg-white text-black rounded-full"
-            >
-              ×
-            </button>
+            )}
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {uploading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded-lg">
-            <p>Uploading photos...</p>
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="flex items-center gap-2 bg-background p-4 rounded-lg shadow-lg">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <p className="text-sm font-medium">Uploading photos...</p>
           </div>
         </div>
       )}

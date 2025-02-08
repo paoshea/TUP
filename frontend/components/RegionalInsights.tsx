@@ -2,6 +2,10 @@
 
 import React from 'react';
 import { MapPin, TrendingUp, History, Users } from 'lucide-react';
+import { Card, CardHeader, CardContent, CardFooter } from './ui/card';
+import { Badge } from './ui/badge';
+import { Progress } from './ui/progress';
+import { HoverCard, HoverCardTrigger, HoverCardContent } from './ui/hover-card';
 
 const regions = [
   {
@@ -30,75 +34,90 @@ const regions = [
 
 export function RegionalInsights() {
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold mb-6">Regional Insights</h2>
+    <Card>
+      <CardHeader>
+        <h2 className="text-2xl font-semibold">Regional Insights</h2>
+      </CardHeader>
 
-      <div className="grid grid-cols-1 gap-6">
+      <CardContent className="grid grid-cols-1 gap-6">
         {regions.map((region) => (
-          <div
-            key={region.name}
-            className="border rounded-lg p-6 space-y-4 hover:border-blue-500 transition-colors"
-          >
-            {/* Region Header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-blue-600" />
-                <h3 className="text-lg font-semibold">{region.name}</h3>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Users className="h-4 w-4" />
-                <span>{region.showStats.participationRate}% Participation</span>
-              </div>
-            </div>
-
-            {/* Areas */}
-            <div className="pl-7">
-              <p className="text-sm text-gray-600 mb-1">Areas:</p>
-              <div className="flex flex-wrap gap-2">
-                {region.areas.map((area) => (
-                  <span
-                    key={area}
-                    className="px-2 py-1 bg-gray-100 rounded-full text-sm text-gray-700"
-                  >
-                    {area}
+          <Card key={region.name}>
+            <CardContent className="pt-6">
+              {/* Region Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  <h3 className="text-lg font-semibold">{region.name}</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <Progress value={region.showStats.participationRate} className="w-[100px]" />
+                  <span className="text-sm text-muted-foreground">
+                    {region.showStats.participationRate}%
                   </span>
-                ))}
+                </div>
               </div>
-            </div>
 
-            {/* Characteristics */}
-            <div className="pl-7">
-              <p className="text-sm text-gray-600 mb-2">Key Characteristics:</p>
-              <ul className="list-disc list-inside space-y-1 text-gray-700">
-                {region.characteristics.map((trait) => (
-                  <li key={trait}>{trait}</li>
-                ))}
-              </ul>
-            </div>
+              {/* Areas */}
+              <div className="space-y-2 mb-6">
+                <p className="text-sm font-medium">Areas:</p>
+                <div className="flex flex-wrap gap-2">
+                  {region.areas.map((area) => (
+                    <Badge key={area} variant="secondary">
+                      {area}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
 
-            {/* Historical Data */}
-            <div className="flex items-start gap-2 pl-7">
-              <History className="h-5 w-5 text-gray-500 mt-0.5" />
-              <p className="text-gray-700">{region.historicalData}</p>
-            </div>
+              {/* Characteristics */}
+              <div className="space-y-2 mb-6">
+                <p className="text-sm font-medium">Key Characteristics:</p>
+                <ul className="grid gap-1.5">
+                  {region.characteristics.map((trait) => (
+                    <li key={trait} className="text-sm text-muted-foreground flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      {trait}
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-            {/* Show Statistics */}
-            <div className="mt-4 pl-7">
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 mb-3 flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  Show Statistics
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-sm text-blue-700">Average Score</p>
-                    <p className="text-xl font-semibold text-blue-900">
-                      {region.showStats.averageScore}/10
+              {/* Historical Data */}
+              <HoverCard>
+                <HoverCardTrigger asChild>
+                  <div className="flex items-start gap-2 cursor-help">
+                    <History className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <p className="text-sm text-muted-foreground">{region.historicalData}</p>
+                  </div>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-80">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold">Historical Context</h4>
+                    <p className="text-sm text-muted-foreground">{region.historicalData}</p>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
+
+              {/* Show Statistics */}
+              <Card className="mt-6">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2 font-medium">
+                    <TrendingUp className="h-4 w-4" />
+                    Show Statistics
+                  </div>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Average Score</p>
+                    <p className="text-2xl font-semibold">
+                      {region.showStats.averageScore}
+                      <span className="text-sm text-muted-foreground">/10</span>
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-blue-700">Top Breeds</p>
-                    <ul className="text-blue-900">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Top Breeds</p>
+                    <ul className="space-y-1">
                       {region.showStats.topBreeds.map((breed) => (
                         <li key={breed} className="text-sm">
                           {breed}
@@ -106,23 +125,27 @@ export function RegionalInsights() {
                       ))}
                     </ul>
                   </div>
-                  <div>
-                    <p className="text-sm text-blue-700">Participation Rate</p>
-                    <p className="text-xl font-semibold text-blue-900">
-                      {region.showStats.participationRate}%
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Participation Rate</p>
+                    <p className="text-2xl font-semibold">
+                      {region.showStats.participationRate}
+                      <span className="text-sm text-muted-foreground">%</span>
                     </p>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                </CardContent>
+              </Card>
+            </CardContent>
+          </Card>
         ))}
-      </div>
+      </CardContent>
 
-      {/* Region Selection Map - Placeholder */}
-      <div className="mt-6 p-4 bg-gray-100 rounded-lg text-center">
-        <p className="text-gray-600">Interactive region map coming soon</p>
-      </div>
-    </div>
+      <CardFooter>
+        <Card className="w-full">
+          <CardContent className="py-4 text-center text-sm text-muted-foreground">
+            Interactive region map coming soon
+          </CardContent>
+        </Card>
+      </CardFooter>
+    </Card>
   );
 }

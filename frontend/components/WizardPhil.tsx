@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Wand2, SendHorizontal, Sparkles, History, X } from 'lucide-react';
+import { Wand2, SendHorizontal, Sparkles, History, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Card } from './ui/card';
+import { ScrollArea } from './ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -61,95 +67,95 @@ export function WizardPhil() {
 
   return (
     <>
-      {/* Floating button */}
-      <button
+      <Button
+        size="icon"
+        className="fixed bottom-6 right-6 h-12 w-12 rounded-full shadow-lg"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 bg-blue-600 text-white rounded-full p-4 shadow-lg hover:bg-blue-700 transition-colors"
       >
         <Wand2 className="h-6 w-6" />
-      </button>
+        <span className="sr-only">Open Wizard Phil</span>
+      </Button>
 
-      {/* Chat interface */}
-      {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl h-[600px] flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-blue-600" />
-                <h2 className="text-lg font-semibold">Wizard Phil</h2>
-              </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-2xl h-[600px] flex flex-col gap-0 p-0">
+          <DialogHeader className="px-4 py-2 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Wizard Phil
+            </DialogTitle>
+          </DialogHeader>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4">
               {messages.map((message, index) => (
                 <div
                   key={index}
-                  className={`flex ${
+                  className={cn(
+                    'flex',
                     message.role === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
+                  )}
                 >
-                  <div
-                    className={`max-w-[80%] rounded-lg p-3 ${
+                  <Card
+                    className={cn(
+                      'max-w-[80%] p-3',
                       message.role === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-900'
-                    }`}
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
+                    )}
                   >
-                    <p>{message.content}</p>
+                    <p className="text-sm">{message.content}</p>
                     <span className="text-xs opacity-75 mt-1 block">
                       {message.timestamp.toLocaleTimeString()}
                     </span>
-                  </div>
+                  </Card>
                 </div>
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-gray-100 rounded-lg p-3 animate-pulse">
-                    <div className="h-4 w-24 bg-gray-300 rounded"></div>
-                  </div>
+                  <Card className="max-w-[80%] p-3 bg-muted">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <p className="text-sm">Thinking...</p>
+                    </div>
+                  </Card>
                 </div>
               )}
             </div>
+          </ScrollArea>
 
-            {/* Input form */}
-            <form onSubmit={handleSubmit} className="p-4 border-t">
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="p-2 text-gray-500 hover:text-gray-700"
-                  onClick={() => {
-                    // TODO: Implement history view
-                  }}
-                >
-                  <History className="h-5 w-5" />
-                </button>
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask Wizard Phil anything..."
-                  className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading || !input.trim()}
-                  className="bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <SendHorizontal className="h-5 w-5" />
-                </button>
-              </div>
+          <div className="p-4 border-t">
+            <form onSubmit={handleSubmit} className="flex gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                onClick={() => {
+                  // TODO: Implement history view
+                }}
+              >
+                <History className="h-5 w-5" />
+                <span className="sr-only">View history</span>
+              </Button>
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask Wizard Phil anything..."
+                className="flex-1"
+              />
+              <Button
+                type="submit"
+                size="icon"
+                disabled={isLoading || !input.trim()}
+                className="shrink-0"
+              >
+                <SendHorizontal className="h-5 w-5" />
+                <span className="sr-only">Send message</span>
+              </Button>
             </form>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
