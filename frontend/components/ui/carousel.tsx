@@ -102,9 +102,7 @@ const Carousel = React.forwardRef<
             size="icon"
             className={cn(
               'absolute left-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full',
-              orientation === 'horizontal'
-                ? 'left-12 -translate-x-1/2'
-                : 'left-1/2 -translate-x-1/2 rotate-90'
+              !prevBtnDisabled && 'opacity-100'
             )}
             disabled={prevBtnDisabled}
             onClick={() => emblaApi?.scrollPrev()}
@@ -117,9 +115,7 @@ const Carousel = React.forwardRef<
             size="icon"
             className={cn(
               'absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full',
-              orientation === 'horizontal'
-                ? 'right-12 translate-x-1/2'
-                : 'right-1/2 translate-x-1/2 rotate-90'
+              !nextBtnDisabled && 'opacity-100'
             )}
             disabled={nextBtnDisabled}
             onClick={() => emblaApi?.scrollNext()}
@@ -158,7 +154,10 @@ const CarouselPrevious = React.forwardRef<
     ref={ref}
     variant={variant}
     size={size}
-    className={cn('absolute left-4 top-1/2 -translate-y-1/2', className)}
+    className={cn(
+      'absolute left-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full',
+      className
+    )}
     {...props}
   >
     <ChevronLeft className="h-4 w-4" />
@@ -175,7 +174,10 @@ const CarouselNext = React.forwardRef<
     ref={ref}
     variant={variant}
     size={size}
-    className={cn('absolute right-4 top-1/2 -translate-y-1/2', className)}
+    className={cn(
+      'absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full',
+      className
+    )}
     {...props}
   >
     <ChevronRight className="h-4 w-4" />
