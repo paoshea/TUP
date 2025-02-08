@@ -1,170 +1,131 @@
+"use client";
+
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { usePhotos } from '@/hooks/usePhotos';
-import { ImagePlus, X, Loader2 } from 'lucide-react';
-import { Card, CardContent } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Dialog, DialogContent } from './ui/dialog';
-import { Alert, AlertDescription } from './ui/alert';
-import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import { Camera, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PhotoGalleryProps {
-  animalId: string;
   photos: string[];
-  onPhotosChange?: (photos: string[]) => void;
+  onPhotosChange: (photos: string[]) => void;
 }
 
-export function PhotoGallery({ animalId, photos, onPhotosChange }: PhotoGalleryProps) {
+export function PhotoGallery({ photos, onPhotosChange }: PhotoGalleryProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
-  const { uploadPhoto, deletePhoto, uploading, error } = usePhotos(animalId);
+  const [previewIndex, setPreviewIndex] = useState<number>(0);
 
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    const files = Array.from(e.dataTransfer.files).filter(file => 
-      file.type.startsWith('image/')
-    );
-
-    if (files.length === 0) return;
-
-    try {
-      const uploadPromises = files.map(async file => {
-        const url = await uploadPhoto(file);
-        return url;
-      });
-
-      const newUrls = await Promise.all(uploadPromises);
-      const updatedPhotos = [...photos, ...newUrls];
-      onPhotosChange?.(updatedPhotos);
-    } catch (err) {
-      console.error('Failed to upload photos:', err);
-    }
+  const handlePhotoClick = (photo: string, index: number) => {
+    setSelectedPhoto(photo);
+    setPreviewIndex(index);
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files?.length) return;
-
-    try {
-      const uploadPromises = Array.from(files).map(async file => {
-        const url = await uploadPhoto(file);
-        return url;
-      });
-
-      const newUrls = await Promise.all(uploadPromises);
-      const updatedPhotos = [...photos, ...newUrls];
-      onPhotosChange?.(updatedPhotos);
-    } catch (err) {
-      console.error('Failed to upload photos:', err);
-    }
+  const handleRemovePhoto = (photoToRemove: string) => {
+    const newPhotos = photos.filter(photo => photo !== photoToRemove);
+    onPhotosChange(newPhotos);
   };
 
-  const handleDelete = async (url: string) => {
-    try {
-      await deletePhoto(url);
-      const updatedPhotos = photos.filter(p => p !== url);
-      onPhotosChange?.(updatedPhotos);
-      if (selectedPhoto === url) {
-        setSelectedPhoto(null);
-      }
-    } catch (err) {
-      console.error('Failed to delete photo:', err);
+  const handleNavigate = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      setPreviewIndex(prev => (prev > 0 ? prev - 1 : photos.length - 1));
+      setSelectedPhoto(photos[previewIndex > 0 ? previewIndex - 1 : photos.length - 1]);
+    } else {
+      setPreviewIndex(prev => (prev < photos.length - 1 ? prev + 1 : 0));
+      setSelectedPhoto(photos[previewIndex < photos.length - 1 ? previewIndex + 1 : 0]);
     }
   };
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardContent>
-          <div
-            onDrop={handleDrop}
-            onDragOver={(e) => e.preventDefault()}
-            className={cn(
-              'flex flex-col items-center justify-center gap-4 p-8 text-center',
-              'border-2 border-dashed border-muted rounded-lg',
-              'transition-colors duration-200',
-              'hover:border-primary/50'
-            )}
-          >
-            <ImagePlus className="h-8 w-8 text-muted-foreground" />
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Drag and drop photos here</p>
-              <p className="text-xs text-muted-foreground">or</p>
-              <Button variant="secondary" asChild>
-                <label className="cursor-pointer">
-                  Browse Files
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                </label>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error.message}</AlertDescription>
-        </Alert>
-      )}
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {photos.map((url) => (
-          <div key={url} className="relative group">
-            <div 
-              className="aspect-square relative cursor-pointer rounded-lg overflow-hidden"
-              onClick={() => setSelectedPhoto(url)}
-            >
-              <Image
-                src={url}
-                alt="Animal photo"
-                fill
-                className="object-cover transition-transform group-hover:scale-105"
-                sizes="(max-width: 768px) 50vw, 25vw"
-              />
-            </div>
-            <Button
-              variant="destructive"
-              size="icon"
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => handleDelete(url)}
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Delete photo</span>
-            </Button>
-          </div>
-        ))}
-      </div>
-
-      <Dialog open={selectedPhoto !== null} onOpenChange={() => setSelectedPhoto(null)}>
-        <DialogContent className="max-w-4xl">
-          <div className="relative aspect-square">
-            {selectedPhoto && (
-              <Image
-                src={selectedPhoto}
-                alt="Selected photo"
-                fill
-                className="object-contain"
-                sizes="90vw"
-                priority
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {uploading && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="flex items-center gap-2 bg-background p-4 rounded-lg shadow-lg">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <p className="text-sm font-medium">Uploading photos...</p>
-          </div>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Photo Gallery</CardTitle>
+          <Button size="sm">
+            <Camera className="h-4 w-4 mr-2" />
+            Add Photos
+          </Button>
         </div>
-      )}
-    </div>
+      </CardHeader>
+      <CardContent>
+        {photos.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg">
+            <Camera className="h-8 w-8 text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">No photos yet</p>
+            <p className="text-xs text-muted-foreground">
+              Upload photos to track progress
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {photos.map((photo, index) => (
+              <div
+                key={photo}
+                className="relative group aspect-square rounded-lg overflow-hidden border bg-muted"
+              >
+                <Image
+                  src={photo}
+                  alt={`Photo ${index + 1}`}
+                  fill
+                  className="object-cover cursor-pointer transition-transform group-hover:scale-105"
+                  onClick={() => handlePhotoClick(photo, index)}
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemovePhoto(photo);
+                  }}
+                  className="absolute top-2 right-2 p-1 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <Dialog open={!!selectedPhoto} onOpenChange={() => setSelectedPhoto(null)}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Photo Preview</DialogTitle>
+            </DialogHeader>
+            <div className="relative aspect-video">
+              {selectedPhoto && (
+                <Image
+                  src={selectedPhoto}
+                  alt="Preview"
+                  fill
+                  className="object-contain"
+                />
+              )}
+              <div className="absolute inset-0 flex items-center justify-between p-4">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleNavigate('prev')}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleNavigate('next')}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="text-center text-sm text-muted-foreground">
+              Photo {previewIndex + 1} of {photos.length}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
   );
 }

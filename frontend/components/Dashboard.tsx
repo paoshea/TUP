@@ -1,112 +1,194 @@
 "use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { ClipboardList, Calendar, Map, Settings } from 'lucide-react';
-import { Card, CardHeader, CardContent } from './ui/card';
+import React, { useEffect, useState } from 'react';
+import { mockStore } from '@/lib/mock/store';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-
-const features = [
-  {
-    name: 'Pre-Show Preparation',
-    icon: ClipboardList,
-    description: 'Create checklists and import animal details',
-    href: '/preparation',
-  },
-  {
-    name: 'Show Schedule',
-    icon: Calendar,
-    description: 'View and manage your show timeline',
-    href: '/schedule',
-  },
-  {
-    name: 'Regional Insights',
-    icon: Map,
-    description: 'Access region-specific evaluation criteria',
-    href: '/insights',
-  },
-  {
-    name: 'Settings',
-    icon: Settings,
-    description: 'Customize your evaluation preferences',
-    href: '/settings',
-  },
-];
+import { Progress } from './ui/progress';
+import {
+  Calendar,
+  ClipboardList,
+  TrendingUp,
+  Users,
+  ChevronRight,
+} from 'lucide-react';
+import Link from 'next/link';
+import type { Show, Animal, Statistics } from '@/lib/types/mock';
 
 export function Dashboard() {
+  const [upcomingShows, setUpcomingShows] = useState<Show[]>([]);
+  const [recentAnimals, setRecentAnimals] = useState<Animal[]>([]);
+  const [stats, setStats] = useState<Statistics | null>(null);
+
+  useEffect(() => {
+    // Get data from mock store
+    const shows = mockStore.getShows().filter(show => show.status === 'upcoming');
+    const animals = mockStore.getAnimals().slice(0, 5); // Get 5 most recent
+    const statistics = mockStore.getStatistics();
+
+    setUpcomingShows(shows);
+    setRecentAnimals(animals);
+    setStats(statistics);
+  }, []);
+
   return (
-    <div className="container space-y-8">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Welcome to LiveStock Show Assistant</h1>
-        <p className="text-muted-foreground">
-          Manage your livestock shows and evaluations from one central dashboard.
-        </p>
-      </div>
+    <div className="space-y-8">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {stats && (
+          <>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Animals</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalAnimals}</div>
+                <p className="text-xs text-muted-foreground">
+                  Registered in the system
+                </p>
+              </CardContent>
+            </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {features.map((feature) => (
-          <Card key={feature.name} className="relative group overflow-hidden">
-            <Link href={feature.href} className="absolute inset-0 z-10">
-              <span className="sr-only">{feature.name}</span>
-            </Link>
-            <CardHeader>
-              <div className="flex items-center gap-4">
-                <div className="rounded-lg bg-primary/10 p-2 group-hover:bg-primary/20 transition-colors">
-                  <feature.icon className="h-6 w-6 text-primary" />
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Upcoming Shows</CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.upcomingShows}</div>
+                <p className="text-xs text-muted-foreground">
+                  Shows scheduled
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Evaluations</CardTitle>
+                <ClipboardList className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.completedEvaluations}</div>
+                <p className="text-xs text-muted-foreground">
+                  Completed evaluations
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Average Scores</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {stats.averageScores.conformation.toFixed(1)}
                 </div>
-                <h3 className="font-semibold tracking-tight">{feature.name}</h3>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{feature.description}</p>
-            </CardContent>
-          </Card>
-        ))}
+                <p className="text-xs text-muted-foreground">
+                  Overall performance
+                </p>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold tracking-tight">Recent Evaluations</h2>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/evaluations">View all</Link>
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-32 text-muted-foreground">
-            No recent evaluations found.
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Shows</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {upcomingShows.map(show => (
+                <div key={show.id} className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium leading-none">{show.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(show.startDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href={`/shows/${show.id}`}>
+                      <span className="sr-only">View show details</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              ))}
+              {upcomingShows.length === 0 && (
+                <p className="text-sm text-muted-foreground">No upcoming shows</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold tracking-tight">Quick Actions</h2>
-          </div>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <Button asChild>
-            <Link href="/evaluations/new">
-              <ClipboardList className="mr-2 h-4 w-4" />
-              New Evaluation
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/animals">
-              <Map className="mr-2 h-4 w-4" />
-              View Animals
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/shows">
-              <Calendar className="mr-2 h-4 w-4" />
-              Upcoming Shows
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Animals</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentAnimals.map(animal => (
+                <div key={animal.id} className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium leading-none">{animal.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {animal.breed} • {animal.gender}
+                    </p>
+                  </div>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href={`/animals/${animal.id}`}>
+                      <span className="sr-only">View animal details</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {stats && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Performance Overview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Movement</span>
+                  <span className="text-muted-foreground">{stats.averageScores.movement.toFixed(1)}/10</span>
+                </div>
+                <Progress value={stats.averageScores.movement * 10} />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Conformation</span>
+                  <span className="text-muted-foreground">{stats.averageScores.conformation.toFixed(1)}/10</span>
+                </div>
+                <Progress value={stats.averageScores.conformation * 10} />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Muscle Development</span>
+                  <span className="text-muted-foreground">{stats.averageScores.muscleDevelopment.toFixed(1)}/10</span>
+                </div>
+                <Progress value={stats.averageScores.muscleDevelopment * 10} />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Breed Characteristics</span>
+                  <span className="text-muted-foreground">{stats.averageScores.breedCharacteristics.toFixed(1)}/10</span>
+                </div>
+                <Progress value={stats.averageScores.breedCharacteristics * 10} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
