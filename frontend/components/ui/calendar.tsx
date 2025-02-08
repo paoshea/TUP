@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import { cn } from '../../lib/utils';
 import { buttonVariants } from './button';
@@ -47,13 +48,9 @@ function Calendar({
         day_hidden: 'invisible',
         ...classNames,
       }}
-      modifiers={{
-        today: new Date(),
-      }}
-      modifiersStyles={{
-        today: {
-          fontWeight: 'bold',
-        },
+      components={{
+        IconLeft: () => <ChevronLeft className="h-4 w-4" />,
+        IconRight: () => <ChevronRight className="h-4 w-4" />,
       }}
       {...props}
     />
