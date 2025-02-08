@@ -1,54 +1,29 @@
 import {
-  generateAnimal,
-  generateShow,
-  generateRegion,
-  generateChecklistItem,
-  generateEvaluation,
-  generateUser,
+  generateAnimals,
+  generateRegions,
+  generateChecklists,
+  generateStatistics,
+  generateCurrentUser,
+  generateShows,
 } from './generators';
-import type {
-  Animal,
-  Show,
-  Region,
-  ChecklistItem,
-  Evaluation,
-  User,
-} from '../types/mock';
+import type { Animal, Region, ChecklistItem, Statistics, User, Show } from '../types/mock';
 
 class MockStore {
-  private animals: Animal[] = [];
-  private shows: Show[] = [];
-  private regions: Region[] = [];
-  private checklists: ChecklistItem[] = [];
-  private evaluations: Evaluation[] = [];
-  private users: User[] = [];
-  private currentUser: User | null = null;
+  private animals: Animal[];
+  private regions: Region[];
+  private checklists: ChecklistItem[];
+  private statistics: Statistics;
+  private currentUser: User;
+  private shows: Show[];
 
   constructor() {
-    this.initializeData();
-  }
-
-  private initializeData() {
-    // Generate animals
-    this.animals = Array.from({ length: 20 }, generateAnimal);
-
-    // Generate shows
-    this.shows = Array.from({ length: 5 }, generateShow);
-
-    // Generate regions
-    this.regions = Array.from({ length: 4 }, generateRegion);
-
-    // Generate checklist items
-    this.checklists = Array.from({ length: 10 }, generateChecklistItem);
-
-    // Generate evaluations
-    this.evaluations = Array.from({ length: 15 }, generateEvaluation);
-
-    // Generate users
-    this.users = Array.from({ length: 10 }, generateUser);
-
-    // Set current user
-    this.currentUser = generateUser();
+    // Initialize with mock data
+    this.animals = generateAnimals();
+    this.regions = generateRegions();
+    this.checklists = generateChecklists();
+    this.statistics = generateStatistics();
+    this.currentUser = generateCurrentUser();
+    this.shows = generateShows();
   }
 
   // Animal methods
@@ -56,12 +31,14 @@ class MockStore {
     return this.animals;
   }
 
-  getAnimalById(id: string): Animal | undefined {
+  getAnimal(id: string): Animal | undefined {
     return this.animals.find(animal => animal.id === id);
   }
 
-  getAnimalsByOwner(ownerId: string): Animal[] {
-    return this.animals.filter(animal => animal.owner.id === ownerId);
+  updateAnimal(id: string, data: Partial<Animal>): void {
+    this.animals = this.animals.map(animal =>
+      animal.id === id ? { ...animal, ...data } : animal
+    );
   }
 
   // Show methods
@@ -69,7 +46,7 @@ class MockStore {
     return this.shows;
   }
 
-  getShowById(id: string): Show | undefined {
+  getShow(id: string): Show | undefined {
     return this.shows.find(show => show.id === id);
   }
 
@@ -82,7 +59,7 @@ class MockStore {
     return this.regions;
   }
 
-  getRegionByName(name: string): Region | undefined {
+  getRegion(name: string): Region | undefined {
     return this.regions.find(region => region.name === name);
   }
 
@@ -91,90 +68,35 @@ class MockStore {
     return this.checklists;
   }
 
-  getChecklistsByCategory(category: string): ChecklistItem[] {
-    return this.checklists.filter(item => item.category === category);
+  updateChecklist(id: string, data: Partial<ChecklistItem>): void {
+    this.checklists = this.checklists.map(item =>
+      item.id === id ? { ...item, ...data } : item
+    );
   }
 
-  updateChecklistItem(id: string, completed: boolean): void {
-    const item = this.checklists.find(item => item.id === id);
-    if (item) {
-      item.completed = completed;
-    }
-  }
-
-  // Evaluation methods
-  getEvaluations(): Evaluation[] {
-    return this.evaluations;
-  }
-
-  getEvaluationsByAnimal(animalId: string): Evaluation[] {
-    return this.evaluations.filter(evaluation => evaluation.animalId === animalId);
-  }
-
-  addEvaluation(evaluation: Evaluation): void {
-    this.evaluations.push(evaluation);
-  }
-
-  // User methods
-  getUsers(): User[] {
-    return this.users;
-  }
-
-  getCurrentUser(): User | null {
-    return this.currentUser;
-  }
-
-  getUserById(id: string): User | undefined {
-    return this.users.find(user => user.id === id);
+  addChecklistItem(item: Omit<ChecklistItem, 'id'>): void {
+    const newItem = {
+      id: `check-${this.checklists.length + 1}`,
+      ...item,
+    };
+    this.checklists.push(newItem);
   }
 
   // Statistics methods
-  getStatistics() {
-    return {
-      totalAnimals: this.animals.length,
-      totalShows: this.shows.length,
-      upcomingShows: this.shows.filter(show => show.status === 'upcoming').length,
-      completedEvaluations: this.evaluations.length,
-      activeUsers: this.users.length,
-      completedChecklists: this.checklists.filter(item => item.completed).length,
-      averageScores: this.calculateAverageScores(),
-    };
+  getStatistics(): Statistics {
+    return this.statistics;
   }
 
-  private calculateAverageScores() {
-    const scores = this.evaluations.reduce(
-      (acc, evaluation) => {
-        acc.movement += evaluation.scores.movement;
-        acc.conformation += evaluation.scores.conformation;
-        acc.muscleDevelopment += evaluation.scores.muscleDevelopment;
-        acc.breedCharacteristics += evaluation.scores.breedCharacteristics;
-        return acc;
-      },
-      {
-        movement: 0,
-        conformation: 0,
-        muscleDevelopment: 0,
-        breedCharacteristics: 0,
-      }
-    );
-
-    const count = this.evaluations.length;
-    return {
-      movement: count ? +(scores.movement / count).toFixed(1) : 0,
-      conformation: count ? +(scores.conformation / count).toFixed(1) : 0,
-      muscleDevelopment: count ? +(scores.muscleDevelopment / count).toFixed(1) : 0,
-      breedCharacteristics: count ? +(scores.breedCharacteristics / count).toFixed(1) : 0,
-    };
+  // User methods
+  getCurrentUser(): User {
+    return this.currentUser;
   }
 
-  // Refresh data
-  refreshData() {
-    this.initializeData();
+  // Helper methods
+  private generateId(): string {
+    return Math.random().toString(36).substring(2, 9);
   }
 }
 
-// Create a singleton instance
+// Export a singleton instance
 export const mockStore = new MockStore();
-
-// Export type for use in components
-export type MockStoreType = typeof mockStore;

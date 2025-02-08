@@ -1,241 +1,157 @@
-import { faker } from '@faker-js/faker';
-import type {
-  Animal,
-  ShowEntry,
-  HealthRecord,
-  Owner,
-  Show,
-  ShowCategory,
-  ShowParticipant,
-  Judge,
-  Region,
-  ChecklistItem,
-  Evaluation,
-  User
-} from '../types/mock';
+import type { Animal, Region, ChecklistItem, Statistics, User, Show } from '../types/mock';
 
-// Use data URLs for placeholder images
-const placeholderImages = [
-  '/next.svg',
-  '/vercel.svg',
-  '/globe.svg',
-  '/window.svg',
-  '/file.svg',
-];
+export function generateAnimals(count: number = 20): Animal[] {
+  const breeds = ['Angus', 'Hereford', 'Charolais', 'Simmental', 'Limousin'];
+  
+  return Array.from({ length: count }, (_, i) => ({
+    id: `animal-${i + 1}`,
+    name: `Animal ${i + 1}`,
+    breed: breeds[Math.floor(Math.random() * breeds.length)],
+    age: Math.floor(Math.random() * 5) + 1,
+    weight: Math.floor(Math.random() * 500) + 500,
+    images: [
+      '/placeholders/animal-1.jpg',
+      '/placeholders/animal-2.jpg',
+      '/placeholders/animal-3.jpg',
+    ],
+    scores: {
+      movement: Math.floor(Math.random() * 3) + 7,
+      conformation: Math.floor(Math.random() * 3) + 7,
+      muscleDevelopment: Math.floor(Math.random() * 3) + 7,
+      breedCharacteristics: Math.floor(Math.random() * 3) + 7,
+    },
+    notes: 'Sample evaluation notes for this animal.',
+  }));
+}
 
-// Helper function to generate a random number between min and max
-const randomScore = () => faker.number.int({ min: 6, max: 10 });
+export function generateShows(): Show[] {
+  const locations = ['Central Fairgrounds', 'State Exhibition Center', 'Regional Show Arena'];
+  const categories = ['Junior', 'Senior', 'Yearling', 'Breeding', 'Market'];
+  
+  return [
+    {
+      id: 'show-1',
+      name: 'Spring Livestock Exhibition',
+      date: '2025-03-15',
+      location: locations[0],
+      status: 'upcoming',
+      participants: 45,
+      categories: categories.slice(0, 3),
+    },
+    {
+      id: 'show-2',
+      name: 'Regional Cattle Show',
+      date: '2025-04-20',
+      location: locations[1],
+      status: 'upcoming',
+      participants: 60,
+      categories: categories.slice(1, 4),
+    },
+    {
+      id: 'show-3',
+      name: 'National Livestock Competition',
+      date: '2025-05-10',
+      location: locations[2],
+      status: 'upcoming',
+      participants: 85,
+      categories: categories,
+    },
+  ];
+}
 
-// Helper function to get random placeholder images
-const getRandomImages = (count: number = 3) => {
-  return Array.from(
-    { length: faker.number.int({ min: 1, max: count }) },
-    () => faker.helpers.arrayElement(placeholderImages)
-  );
-};
+export function generateRegions(): Region[] {
+  return [
+    {
+      name: 'North Region',
+      areas: ['Area 1', 'Area 2', 'Area 3'],
+      characteristics: [
+        'High altitude grazing',
+        'Traditional breeding practices',
+        'Strong community support',
+      ],
+      historicalData: 'Historical performance data for the North Region shows consistent improvement in breed quality over the past 5 years.',
+      showStats: {
+        participationRate: 85,
+        averageScore: 8.5,
+        topBreeds: ['Angus', 'Hereford', 'Charolais'],
+      },
+    },
+    {
+      name: 'South Region',
+      areas: ['Area 4', 'Area 5', 'Area 6'],
+      characteristics: [
+        'Coastal climate',
+        'Modern facilities',
+        'Export-focused',
+      ],
+      historicalData: 'The South Region has seen significant investment in infrastructure and technology adoption.',
+      showStats: {
+        participationRate: 78,
+        averageScore: 8.2,
+        topBreeds: ['Simmental', 'Limousin', 'Angus'],
+      },
+    },
+  ];
+}
 
-export const generateOwner = (): Owner => ({
-  id: faker.string.uuid(),
-  name: faker.person.fullName(),
-  email: faker.internet.email(),
-  phone: faker.phone.number(),
-  farm: `${faker.company.name()} Farm`,
-  region: faker.location.state(),
-});
+export function generateChecklists(): ChecklistItem[] {
+  return [
+    {
+      id: 'check-1',
+      text: 'Complete health certificates',
+      completed: false,
+      category: 'documentation',
+      dueDate: '2025-03-01',
+      assignedTo: 'John Smith',
+    },
+    {
+      id: 'check-2',
+      text: 'Schedule transportation',
+      completed: true,
+      category: 'preparation',
+      dueDate: '2025-02-28',
+      assignedTo: 'Sarah Johnson',
+    },
+    {
+      id: 'check-3',
+      text: 'Prepare grooming equipment',
+      completed: false,
+      category: 'equipment',
+      dueDate: '2025-02-25',
+    },
+    {
+      id: 'check-4',
+      text: 'Review show guidelines',
+      completed: false,
+      category: 'preparation',
+      dueDate: '2025-02-20',
+    },
+    {
+      id: 'check-5',
+      text: 'Update vaccination records',
+      completed: true,
+      category: 'health',
+      dueDate: '2025-02-15',
+      assignedTo: 'Dr. Thompson',
+    },
+  ];
+}
 
-export const generateHealthRecord = (): HealthRecord => ({
-  id: faker.string.uuid(),
-  date: faker.date.past(),
-  type: faker.helpers.arrayElement(['vaccination', 'treatment', 'checkup']),
-  description: faker.lorem.sentence(),
-  veterinarian: faker.person.fullName(),
-  nextFollowUp: faker.helpers.maybe(() => faker.date.future()),
-});
-
-export const generateShowEntry = (): ShowEntry => ({
-  id: faker.string.uuid(),
-  showName: `${faker.location.city()} Livestock Show`,
-  date: faker.date.past(),
-  location: faker.location.city(),
-  placement: faker.number.int({ min: 1, max: 10 }),
-  totalParticipants: faker.number.int({ min: 10, max: 50 }),
-  category: faker.helpers.arrayElement(['Junior', 'Senior', 'Champion']),
-  judge: faker.person.fullName(),
-  notes: faker.lorem.paragraph(),
-});
-
-export const generateAnimal = (): Animal => ({
-  id: faker.string.uuid(),
-  name: faker.helpers.arrayElement([
-    'Thunder', 'Storm', 'Duke', 'Princess', 'King', 'Queen',
-    'Champion', 'Legend', 'Star', 'Diamond'
-  ]),
-  breed: faker.helpers.arrayElement([
-    'Scottish Blackface', 'Cheviot', 'Suffolk', 'Highland',
-    'North Country Cheviot', 'Hebridean'
-  ]),
-  age: faker.number.int({ min: 1, max: 10 }),
-  weight: faker.number.float({ min: 50, max: 200, fractionDigits: 1 }),
-  gender: faker.helpers.arrayElement(['male', 'female']),
-  registrationNumber: faker.string.alphanumeric(8).toUpperCase(),
-  images: getRandomImages(),
-  scores: {
-    movement: randomScore(),
-    conformation: randomScore(),
-    muscleDevelopment: randomScore(),
-    breedCharacteristics: randomScore(),
-  },
-  notes: faker.lorem.paragraphs(2),
-  showHistory: Array.from(
-    { length: faker.number.int({ min: 0, max: 5 }) },
-    generateShowEntry
-  ),
-  healthRecords: Array.from(
-    { length: faker.number.int({ min: 1, max: 5 }) },
-    generateHealthRecord
-  ),
-  owner: generateOwner(),
-});
-
-export const generateJudge = (): Judge => ({
-  id: faker.string.uuid(),
-  name: faker.person.fullName(),
-  specialization: Array.from(
-    { length: faker.number.int({ min: 1, max: 3 }) },
-    () => faker.helpers.arrayElement([
-      'Dairy Cattle', 'Beef Cattle', 'Sheep', 'Goats', 'Swine',
-      'Equine', 'Poultry'
-    ])
-  ),
-  experience: faker.number.int({ min: 5, max: 30 }),
-  certifications: Array.from(
-    { length: faker.number.int({ min: 1, max: 3 }) },
-    () => faker.helpers.arrayElement([
-      'International Livestock Judge',
-      'Master Breed Evaluator',
-      'Show Ring Excellence',
-      'Breed Standards Specialist'
-    ])
-  ),
-});
-
-export const generateShowCategory = (): ShowCategory => ({
-  id: faker.string.uuid(),
-  name: faker.helpers.arrayElement([
-    'Junior Ewe', 'Senior Ram', 'Yearling Ewe',
-    'Champion Ram', 'Market Lamb'
-  ]),
-  breed: faker.helpers.arrayElement([
-    'Scottish Blackface', 'Cheviot', 'Suffolk',
-    'Highland', 'North Country Cheviot'
-  ]),
-  ageGroup: faker.helpers.arrayElement([
-    'Junior', 'Yearling', 'Senior', 'Mature'
-  ]),
-  gender: faker.helpers.arrayElement(['male', 'female', 'any']),
-  participantCount: faker.number.int({ min: 5, max: 30 }),
-});
-
-export const generateShow = (): Show => {
-  const startDate = faker.date.future();
+export function generateStatistics(): Statistics {
   return {
-    id: faker.string.uuid(),
-    name: `${faker.location.city()} ${faker.date.future().getFullYear()} Livestock Show`,
-    startDate,
-    endDate: faker.date.soon({ days: 3, refDate: startDate }),
-    location: `${faker.location.city()} Exhibition Center`,
-    categories: Array.from(
-      { length: faker.number.int({ min: 3, max: 8 }) },
-      generateShowCategory
-    ),
-    participants: Array.from(
-      { length: faker.number.int({ min: 10, max: 50 }) },
-      (): ShowParticipant => ({
-        id: faker.string.uuid(),
-        animalId: faker.string.uuid(),
-        categoryId: faker.string.uuid(),
-        registrationDate: faker.date.past(),
-        status: faker.helpers.arrayElement([
-          'pending', 'confirmed', 'withdrawn'
-        ]),
-        placement: faker.helpers.maybe(() => faker.number.int({ min: 1, max: 10 })),
-      })
-    ),
-    judges: Array.from(
-      { length: faker.number.int({ min: 2, max: 5 }) },
-      generateJudge
-    ),
-    status: faker.helpers.arrayElement([
-      'upcoming', 'ongoing', 'completed'
-    ]),
+    totalAnimals: 20,
+    upcomingShows: 3,
+    completedEvaluations: 15,
+    activeUsers: 8,
   };
-};
+}
 
-export const generateRegion = (): Region => ({
-  name: `${faker.location.state()} Region`,
-  areas: Array.from(
-    { length: faker.number.int({ min: 2, max: 4 }) },
-    () => faker.location.county()
-  ),
-  characteristics: Array.from(
-    { length: faker.number.int({ min: 2, max: 4 }) },
-    () => faker.lorem.sentence()
-  ),
-  historicalData: faker.lorem.paragraph(),
-  showStats: {
-    participationRate: faker.number.int({ min: 60, max: 95 }),
-    averageScore: faker.number.float({ min: 7.0, max: 9.5, fractionDigits: 1 }),
-    topBreeds: Array.from(
-      { length: 3 },
-      () => faker.helpers.arrayElement([
-        'Scottish Blackface', 'Cheviot', 'Suffolk',
-        'Highland', 'North Country Cheviot', 'Hebridean'
-      ])
-    ),
-  },
-});
-
-export const generateChecklistItem = (): ChecklistItem => ({
-  id: faker.string.uuid(),
-  text: faker.lorem.sentence(),
-  completed: faker.datatype.boolean(),
-  category: faker.helpers.arrayElement([
-    'preparation', 'documentation', 'equipment', 'health', 'general'
-  ]),
-  dueDate: faker.helpers.maybe(() => faker.date.future()),
-  assignedTo: faker.helpers.maybe(() => faker.person.fullName()),
-});
-
-export const generateEvaluation = (): Evaluation => ({
-  id: faker.string.uuid(),
-  animalId: faker.string.uuid(),
-  date: faker.date.recent(),
-  evaluator: faker.person.fullName(),
-  scores: {
-    movement: randomScore(),
-    conformation: randomScore(),
-    muscleDevelopment: randomScore(),
-    breedCharacteristics: randomScore(),
-  },
-  notes: faker.lorem.paragraphs(2),
-  images: getRandomImages(2),
-  recommendations: Array.from(
-    { length: faker.number.int({ min: 1, max: 3 }) },
-    () => faker.lorem.sentence()
-  ),
-});
-
-export const generateUser = (): User => ({
-  id: faker.string.uuid(),
-  name: faker.person.fullName(),
-  email: faker.internet.email(),
-  role: faker.helpers.arrayElement([
-    'owner', 'handler', 'judge', 'admin'
-  ]),
-  organization: faker.company.name(),
-  preferences: {
-    notifications: faker.datatype.boolean(),
-    theme: faker.helpers.arrayElement(['light', 'dark', 'system']),
-    language: faker.helpers.arrayElement(['en', 'es', 'fr']),
-  },
-});
+export function generateCurrentUser(): User {
+  return {
+    id: 'user-1',
+    name: 'John Smith',
+    email: 'john.smith@example.com',
+    role: 'Manager',
+    avatar: 'https://avatar.vercel.sh/john.smith@example.com',
+  };
+}

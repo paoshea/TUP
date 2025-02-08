@@ -22,7 +22,7 @@ export function Dashboard() {
 
   useEffect(() => {
     // Get data from mock store
-    const shows = mockStore.getShows().filter(show => show.status === 'upcoming');
+    const shows = mockStore.getUpcomingShows();
     const animals = mockStore.getAnimals().slice(0, 5); // Get 5 most recent
     const statistics = mockStore.getStatistics();
 
@@ -30,6 +30,22 @@ export function Dashboard() {
     setRecentAnimals(animals);
     setStats(statistics);
   }, []);
+
+  // Calculate average score from recent animals
+  const averageScore = recentAnimals.length
+    ? (
+        recentAnimals.reduce(
+          (sum, animal) =>
+            sum +
+            (animal.scores.movement +
+              animal.scores.conformation +
+              animal.scores.muscleDevelopment +
+              animal.scores.breedCharacteristics) /
+            4,
+          0
+        ) / recentAnimals.length
+      ).toFixed(1)
+    : "0.0";
 
   return (
     <div className="space-y-8">
@@ -77,13 +93,11 @@ export function Dashboard() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Average Scores</CardTitle>
+                <CardTitle className="text-sm font-medium">Average Score</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {stats.averageScores.conformation.toFixed(1)}
-                </div>
+                <div className="text-2xl font-bold">{averageScore}</div>
                 <p className="text-xs text-muted-foreground">
                   Overall performance
                 </p>
@@ -105,7 +119,7 @@ export function Dashboard() {
                   <div className="space-y-1">
                     <p className="text-sm font-medium leading-none">{show.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(show.startDate).toLocaleDateString()}
+                      {new Date(show.date).toLocaleDateString()}
                     </p>
                   </div>
                   <Button variant="ghost" size="sm" asChild>
@@ -134,7 +148,7 @@ export function Dashboard() {
                   <div className="space-y-1">
                     <p className="text-sm font-medium leading-none">{animal.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {animal.breed} • {animal.gender}
+                      {animal.breed} • {animal.age} years old
                     </p>
                   </div>
                   <Button variant="ghost" size="sm" asChild>
@@ -150,41 +164,45 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {stats && (
+      {stats && recentAnimals.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Performance Overview</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Movement</span>
-                  <span className="text-muted-foreground">{stats.averageScores.movement.toFixed(1)}/10</span>
+              {recentAnimals.slice(0, 1).map(animal => (
+                <div key={animal.id} className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Movement</span>
+                      <span className="text-muted-foreground">{animal.scores.movement}/10</span>
+                    </div>
+                    <Progress value={animal.scores.movement * 10} />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Conformation</span>
+                      <span className="text-muted-foreground">{animal.scores.conformation}/10</span>
+                    </div>
+                    <Progress value={animal.scores.conformation * 10} />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Muscle Development</span>
+                      <span className="text-muted-foreground">{animal.scores.muscleDevelopment}/10</span>
+                    </div>
+                    <Progress value={animal.scores.muscleDevelopment * 10} />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Breed Characteristics</span>
+                      <span className="text-muted-foreground">{animal.scores.breedCharacteristics}/10</span>
+                    </div>
+                    <Progress value={animal.scores.breedCharacteristics * 10} />
+                  </div>
                 </div>
-                <Progress value={stats.averageScores.movement * 10} />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Conformation</span>
-                  <span className="text-muted-foreground">{stats.averageScores.conformation.toFixed(1)}/10</span>
-                </div>
-                <Progress value={stats.averageScores.conformation * 10} />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Muscle Development</span>
-                  <span className="text-muted-foreground">{stats.averageScores.muscleDevelopment.toFixed(1)}/10</span>
-                </div>
-                <Progress value={stats.averageScores.muscleDevelopment * 10} />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Breed Characteristics</span>
-                  <span className="text-muted-foreground">{stats.averageScores.breedCharacteristics.toFixed(1)}/10</span>
-                </div>
-                <Progress value={stats.averageScores.breedCharacteristics * 10} />
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>
