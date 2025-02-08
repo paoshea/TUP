@@ -1,21 +1,9 @@
 /** @type {import('next').NextConfig} */
-const config = {
+const nextConfig = {
+  reactStrictMode: true,
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'picsum.photos',
-      },
-      {
-        protocol: 'https',
-        hostname: 'loremflickr.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'cloudinary.com',
-      },
-    ],
+    domains: ['placehold.co', 'avatar.vercel.sh'],
   },
 };
 
-module.exports = config;
+module.exports = nextConfig;
