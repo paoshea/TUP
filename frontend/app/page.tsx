@@ -9,12 +9,12 @@ export default function HomePage() {
       <Header />
       <main className="container mx-auto p-6">
         <h1 className="text-3xl font-bold tracking-tight mb-6">
-          Demo System - Future State Preview
+          TUP Livestock Management System
         </h1>
         
         <p className="text-muted-foreground mb-8">
-          This demo showcases the future state of the TUP Livestock Management System
-          using comprehensive mock data to demonstrate the full functionality.
+          A comprehensive livestock management system for show animals with advanced evaluation tools
+          and data-driven insights.
         </p>
 
         <Dashboard />

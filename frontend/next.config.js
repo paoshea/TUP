@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['placehold.co', 'avatar.vercel.sh'],
+    domains: ['picsum.photos'],
   },
 };
 
