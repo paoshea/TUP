@@ -10,9 +10,9 @@ export function generateAnimals(count: number = 20): Animal[] {
     age: Math.floor(Math.random() * 5) + 1,
     weight: Math.floor(Math.random() * 500) + 500,
     images: [
-      '/placeholders/animal-1.jpg',
-      '/placeholders/animal-2.jpg',
-      '/placeholders/animal-3.jpg',
+      'https://placehold.co/600x400?text=Animal+Photo+1',
+      'https://placehold.co/600x400?text=Animal+Photo+2',
+      'https://placehold.co/600x400?text=Animal+Photo+3',
     ],
     scores: {
       movement: Math.floor(Math.random() * 3) + 7,
@@ -152,6 +152,6 @@ export function generateCurrentUser(): User {
     name: 'John Smith',
     email: 'john.smith@example.com',
     role: 'Manager',
-    avatar: 'https://avatar.vercel.sh/john.smith@example.com',
+    avatar: 'https://placehold.co/40x40?text=JS',
   };
 }
