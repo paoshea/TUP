@@ -10,7 +10,6 @@ import {
 } from '@tanstack/react-table';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { Button } from './button';
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from './pagination';
 
 interface DataTableProps<TData, TValue> {
@@ -122,22 +121,16 @@ export function DataTable<TData, TValue>({
           <PaginationContent>
             <PaginationItem>
               <PaginationPrevious
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  table.previousPage();
-                }}
-                disabled={!table.getCanPreviousPage()}
+                onClick={() => table.previousPage()}
+                aria-disabled={!table.getCanPreviousPage()}
+                className={cn(!table.getCanPreviousPage() && 'pointer-events-none opacity-50')}
               />
             </PaginationItem>
             <PaginationItem>
               <PaginationNext
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  table.nextPage();
-                }}
-                disabled={!table.getCanNextPage()}
+                onClick={() => table.nextPage()}
+                aria-disabled={!table.getCanNextPage()}
+                className={cn(!table.getCanNextPage() && 'pointer-events-none opacity-50')}
               />
             </PaginationItem>
           </PaginationContent>
