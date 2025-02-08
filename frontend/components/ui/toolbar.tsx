@@ -10,7 +10,7 @@ const Toolbar = React.forwardRef<
   <ToolbarPrimitive.Root
     ref={ref}
     className={cn(
-      'flex h-10 items-center gap-1 rounded-md border bg-background p-1',
+      'flex h-10 items-center space-x-1 rounded-md border bg-background p-1',
       className
     )}
     {...props}
@@ -24,7 +24,7 @@ const ToolbarToggleGroup = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToolbarPrimitive.ToggleGroup
     ref={ref}
-    className={cn('flex items-center', className)}
+    className={cn('flex items-center space-x-1', className)}
     {...props}
   />
 ));
@@ -36,7 +36,7 @@ const ToolbarToggleItem = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToolbarPrimitive.ToggleItem
     ref={ref}
-    className={cn(toggleVariants({ variant: 'outline', size: 'sm' }), className)}
+    className={cn(toggleVariants({ variant: 'outline' }), className)}
     {...props}
   />
 ));
@@ -60,10 +60,7 @@ const ToolbarButton = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToolbarPrimitive.Button
     ref={ref}
-    className={cn(
-      toggleVariants({ variant: 'outline', size: 'sm' }),
-      className
-    )}
+    className={cn(toggleVariants({ variant: 'outline' }), className)}
     {...props}
   />
 ));
@@ -75,10 +72,7 @@ const ToolbarLink = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToolbarPrimitive.Link
     ref={ref}
-    className={cn(
-      toggleVariants({ variant: 'outline', size: 'sm' }),
-      className
-    )}
+    className={cn(toggleVariants({ variant: 'outline' }), className)}
     {...props}
   />
 ));

@@ -4,9 +4,13 @@ import { Check, ChevronRight, Circle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const MenubarMenu = MenubarPrimitive.Menu;
+
 const MenubarGroup = MenubarPrimitive.Group;
+
 const MenubarPortal = MenubarPrimitive.Portal;
+
 const MenubarSub = MenubarPrimitive.Sub;
+
 const MenubarRadioGroup = MenubarPrimitive.RadioGroup;
 
 const Menubar = React.forwardRef<
@@ -207,7 +211,7 @@ const MenubarShortcut = ({
     />
   );
 };
-MenubarShortcut.displayName = 'MenubarShortcut';
+MenubarShortcut.displayname = 'MenubarShortcut';
 
 export {
   Menubar,

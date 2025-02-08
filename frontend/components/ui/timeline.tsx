@@ -2,86 +2,61 @@ import * as React from 'react';
 import { cn } from '../../lib/utils';
 
 interface TimelineProps extends React.HTMLAttributes<HTMLDivElement> {
-  align?: 'start' | 'center' | 'end';
+  children: React.ReactNode;
+}
+
+interface TimelineItemProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode;
 }
 
 const Timeline = React.forwardRef<HTMLDivElement, TimelineProps>(
-  ({ className, align = 'start', ...props }, ref) => (
+  ({ className, children, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn(
-        'relative space-y-4',
-        align === 'center' && 'items-center',
-        align === 'end' && 'items-end',
-        className
-      )}
+      className={cn('space-y-4', className)}
       {...props}
-    />
+    >
+      {children}
+    </div>
   )
 );
 Timeline.displayName = 'Timeline';
 
-const TimelineItem = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn('relative pb-4 pl-6 last:pb-0', className)}
-    {...props}
-  />
-));
+const TimelineItem = React.forwardRef<HTMLDivElement, TimelineItemProps>(
+  ({ className, children, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        'relative pl-6 before:absolute before:left-0 before:top-2 before:h-2 before:w-2 before:rounded-full before:bg-border after:absolute after:bottom-0 after:left-1 after:top-3 after:w-[1px] after:bg-border last:after:hidden',
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+);
 TimelineItem.displayName = 'TimelineItem';
 
-const TimelineDot = React.forwardRef<
+const TimelineHeader = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn(
-      'absolute left-0 top-1 h-3 w-3 rounded-full border border-primary bg-background',
-      className
-    )}
+    className={cn('mb-1 flex items-center', className)}
     {...props}
   />
 ));
-TimelineDot.displayName = 'TimelineDot';
-
-const TimelineLine = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      'absolute left-1.5 top-6 h-[calc(100%-24px)] w-[1px] -translate-x-1/2 bg-border',
-      className
-    )}
-    {...props}
-  />
-));
-TimelineLine.displayName = 'TimelineLine';
-
-const TimelineContent = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn('pt-0.5', className)}
-    {...props}
-  />
-));
-TimelineContent.displayName = 'TimelineContent';
+TimelineHeader.displayName = 'TimelineHeader';
 
 const TimelineTitle = React.forwardRef<
-  HTMLHeadingElement,
+  HTMLParagraphElement,
   React.HTMLAttributes<HTMLHeadingElement>
 >(({ className, ...props }, ref) => (
   <h3
     ref={ref}
-    className={cn('font-medium leading-none tracking-tight', className)}
+    className={cn('font-semibold leading-none tracking-tight', className)}
     {...props}
   />
 ));
@@ -99,12 +74,19 @@ const TimelineDescription = React.forwardRef<
 ));
 TimelineDescription.displayName = 'TimelineDescription';
 
+const TimelineContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn('', className)} {...props} />
+));
+TimelineContent.displayName = 'TimelineContent';
+
 export {
   Timeline,
   TimelineItem,
-  TimelineDot,
-  TimelineLine,
-  TimelineContent,
+  TimelineHeader,
   TimelineTitle,
   TimelineDescription,
+  TimelineContent,
 };
