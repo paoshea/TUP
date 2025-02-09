@@ -1,5 +1,3 @@
-// frontend/components/WizardPhil.tsx
-
 "use client";
 
 import React, { useState } from 'react';
@@ -15,10 +13,13 @@ import {
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Bot, Send, Sparkles, TrendingUp, Award, LineChart } from 'lucide-react';
+import { Bot, Send, Sparkles, TrendingUp, Award, LineChart, Mic, Camera } from 'lucide-react';
 import { aiService } from '@/services/ai';
 import { livestockAI } from '@/services/livestockAI';
+import { photoAnalysis } from '@/services/photoAnalysis';
+import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { Badge } from './ui/badge';
+import { PerformanceChart, type PerformanceData } from './PerformanceChart';
 
 interface Message {
   id: string;
@@ -39,6 +40,26 @@ interface Message {
       strengths: string[];
       improvements: string[];
     };
+    photoAnalysis?: {
+      url: string;
+      results: {
+        conformation: {
+          score: number;
+          issues: string[];
+          recommendations: string[];
+        };
+        movement: {
+          score: number;
+          gaitAnalysis: string;
+          improvements: string[];
+        };
+        breedStandards: {
+          compliance: number;
+          matchingTraits: string[];
+          deviations: string[];
+        };
+      };
+    };
   };
 }
 
@@ -48,7 +69,7 @@ export function WizardPhil() {
     {
       id: '1',
       type: 'assistant',
-      content: "Hi! I'm WizardPhil, your AI-powered livestock show assistant. I can help with performance analysis, breed standards, and show preparation. How can I assist you today?",
+      content: "Hi! I'm WizardPhil, your AI-powered livestock show assistant. I can help with performance analysis, breed standards, and show preparation. Try voice input or photo analysis!",
       timestamp: new Date(),
     },
   ]);
@@ -56,11 +77,65 @@ export function WizardPhil() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [relatedTopics, setRelatedTopics] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const { isListening, transcript, startListening, stopListening } = useVoiceInput();
+
+  const handleVoiceInput = () => {
+    if (isListening) {
+      stopListening();
+      if (transcript) {
+        setInput(transcript);
+      }
+    } else {
+      startListening();
+    }
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      // Mock photo upload - replace with actual upload in production
+      const photoUrl = URL.createObjectURL(file);
+      
+      // Analyze photo
+      const analysis = await photoAnalysis.analyzePhoto(photoUrl);
+      
+      const assistantMessage: Message = {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content: 'I\'ve analyzed your photo. Here are the results:',
+        timestamp: new Date(),
+        analysis: {
+          photoAnalysis: {
+            url: photoUrl,
+            results: analysis
+          }
+        }
+      };
+      
+      setMessages(prev => [...prev, assistantMessage]);
+      setSuggestions(['View detailed analysis', 'Compare with standards', 'Get improvement tips']);
+      setRelatedTopics(['Photo Analysis', 'Breed Standards', 'Training Tips']);
+    } catch (error) {
+      console.error('Error analyzing photo:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content: 'Sorry, I had trouble analyzing that photo. Please try again.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim()) return;
 
-    // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
@@ -73,14 +148,12 @@ export function WizardPhil() {
     setIsAnalyzing(true);
 
     try {
-      // Get basic response
       const response = await aiService.processMessage(input);
 
-      // Check for analysis keywords
       if (input.toLowerCase().includes('analysis') || 
           input.toLowerCase().includes('performance') ||
           input.toLowerCase().includes('evaluation')) {
-        // Mock data for demo - replace with actual data in production
+        
         const mockCurrentMetrics = {
           movement: 8,
           conformation: 7,
@@ -103,7 +176,7 @@ export function WizardPhil() {
         );
 
         const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: Date.now().toString(),
           type: 'assistant',
           content: response.content,
           timestamp: new Date(),
@@ -124,7 +197,7 @@ export function WizardPhil() {
         setRelatedTopics(['Performance Trends', 'Breed Standards', 'Training Plans']);
       } else {
         const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: Date.now().toString(),
           type: 'assistant',
           content: response.content,
           timestamp: new Date(),
@@ -136,7 +209,7 @@ export function WizardPhil() {
     } catch (error) {
       console.error('Error processing message:', error);
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: Date.now().toString(),
         type: 'assistant',
         content: "I'm having trouble processing your request. Please try again.",
         timestamp: new Date(),
@@ -260,15 +333,81 @@ export function WizardPhil() {
                             </div>
                           </div>
                         )}
+
+                        {message.analysis?.metrics && message.analysis?.trends && (
+                          <div className="mt-4">
+                            {(() => {
+                              const metrics = message.analysis!.metrics!;
+                              const trends = message.analysis!.trends!;
+                              
+                              const previousData: PerformanceData = {
+                                date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+                                movement: metrics.movement - (trends.movement || 0) / 100,
+                                conformation: metrics.conformation - (trends.conformation || 0) / 100,
+                                muscleDevelopment: metrics.muscleDevelopment - (trends.muscleDevelopment || 0) / 100,
+                                breedCharacteristics: metrics.breedCharacteristics - (trends.breedCharacteristics || 0) / 100
+                              };
+                              
+                              const currentData: PerformanceData = {
+                                date: new Date().toISOString(),
+                                movement: metrics.movement,
+                                conformation: metrics.conformation,
+                                muscleDevelopment: metrics.muscleDevelopment,
+                                breedCharacteristics: metrics.breedCharacteristics
+                              };
+                              
+                              return (
+                                <PerformanceChart
+                                  data={[previousData, currentData]}
+                                  height={200}
+                                  showLegend={true}
+                                />
+                              );
+                            })()}
+                          </div>
+                        )}
+
+                        {message.analysis.photoAnalysis && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Camera className="h-4 w-4" />
+                              <h4 className="font-medium">Photo Analysis</h4>
+                            </div>
+                            <img
+                              src={message.analysis.photoAnalysis.url}
+                              alt="Analyzed photo"
+                              className="w-full rounded-lg mb-2"
+                            />
+                            <div className="space-y-2">
+                              <div>
+                                <p className="text-sm font-medium">Conformation:</p>
+                                <p className="text-sm">Score: {message.analysis.photoAnalysis.results.conformation.score}/10</p>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {message.analysis.photoAnalysis.results.conformation.recommendations.map((rec, i) => (
+                                    <Badge key={i} variant="outline">{rec}</Badge>
+                                  ))}
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">Movement:</p>
+                                <p className="text-sm">{message.analysis.photoAnalysis.results.movement.gaitAnalysis}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">Breed Standards:</p>
+                                <p className="text-sm">Compliance: {message.analysis.photoAnalysis.results.breedStandards.compliance}%</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
               ))}
-              {isAnalyzing && (
+              {(isAnalyzing || isUploading) && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span className="animate-spin">⚬</span>
-                  Analyzing...
+                  {isAnalyzing ? 'Analyzing...' : 'Uploading...'}
                 </div>
               )}
             </div>
@@ -316,13 +455,42 @@ export function WizardPhil() {
               }}
               className="flex gap-2"
             >
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                onClick={handleVoiceInput}
+                className={isListening ? 'bg-primary text-primary-foreground' : ''}
+              >
+                <Mic className="h-4 w-4" />
+                <span className="sr-only">
+                  {isListening ? 'Stop recording' : 'Start recording'}
+                </span>
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                onClick={() => document.getElementById('photo-upload')?.click()}
+                disabled={isUploading}
+              >
+                <Camera className="h-4 w-4" />
+                <span className="sr-only">Upload photo</span>
+              </Button>
+              <input
+                id="photo-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoUpload}
+              />
               <Input
-                placeholder="Ask me anything..."
+                placeholder={isListening ? 'Listening...' : 'Ask me anything...'}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                disabled={isAnalyzing}
+                disabled={isAnalyzing || isListening}
               />
-              <Button type="submit" size="icon" disabled={isAnalyzing}>
+              <Button type="submit" size="icon" disabled={isAnalyzing || isListening}>
                 <Send className="h-4 w-4" />
                 <span className="sr-only">Send message</span>
               </Button>

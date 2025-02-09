@@ -16,5 +16,9 @@
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "npm run build --workspace=frontend",
     "build:backend": "npm run build --workspace=backend"
+  },
+  "dependencies": {
+    "@types/recharts": "^1.8.29",
+    "recharts": "^2.15.1"
   }
 }

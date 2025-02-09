@@ -1,6 +1,6 @@
-// frontend/services/livestockAI.ts
-
 import { DeepseekService } from '@/services/deepseek.service';
+import { AdvancedCache } from '@/services/cache';
+import { openai } from '@/services/openai';
 
 interface PerformanceMetrics {
   movement: number;
@@ -27,30 +27,24 @@ interface PerformanceAnalysis {
   };
 }
 
-interface AIResponseData {
-  currentScore: PerformanceMetrics;
-  historicalTrend: {
-    improvement: Record<keyof PerformanceMetrics, number>;
-    recommendations: string[];
-  };
-  breedCompliance: {
-    overallScore: number;
-    strengthAreas: string[];
-    improvementAreas: string[];
-  };
-  predictions: {
-    expectedScores: PerformanceMetrics;
-    confidenceLevel: number;
-    factors: string[];
-  };
+interface AnalysisCache {
+  analysis: PerformanceAnalysis;
+  timestamp: number;
 }
 
 export class LivestockAI {
-  private deepseek: DeepseekService;
   private static instance: LivestockAI;
+  private deepseek: DeepseekService;
+  private cache: AdvancedCache;
+  private readonly CACHE_MAX_AGE = 3600000; // 1 hour
+  private readonly CACHE_MAX_ITEMS = 100;
 
   private constructor() {
     this.deepseek = DeepseekService.getInstance();
+    this.cache = new AdvancedCache({
+      maxAge: this.CACHE_MAX_AGE,
+      maxItems: this.CACHE_MAX_ITEMS
+    });
   }
 
   static getInstance(): LivestockAI {
@@ -65,23 +59,82 @@ export class LivestockAI {
     currentMetrics: PerformanceMetrics,
     historicalData: PerformanceMetrics[]
   ): Promise<PerformanceAnalysis> {
+    // Check cache first
+    const cacheKey = `performance_${animalId}_${JSON.stringify(currentMetrics)}`;
+    const cached = this.cache.get<AnalysisCache>(cacheKey);
+    if (cached) {
+      return cached.analysis;
+    }
+
     try {
-      // Prepare context for AI analysis
-      const context = this.prepareAnalysisContext(currentMetrics, historicalData);
-      
-      // Get AI insights
-      const aiAnalysis = await this.deepseek.query(context);
-      
-      // Process and structure the AI response
-      return this.processAIResponse(aiAnalysis, currentMetrics, historicalData);
+      // Try OpenAI analysis first
+      const openAIResponse = await openai.analyze('evaluation', {
+        currentMetrics,
+        historicalData
+      });
+
+      if (openAIResponse.evaluation) {
+        const analysis: PerformanceAnalysis = {
+          currentScore: currentMetrics,
+          historicalTrend: {
+            improvement: this.calculateTrends(currentMetrics, historicalData),
+            recommendations: openAIResponse.evaluation.recommendations
+          },
+          breedCompliance: {
+            overallScore: openAIResponse.evaluation.predictions.showPerformance,
+            strengthAreas: openAIResponse.evaluation.training.focus,
+            improvementAreas: openAIResponse.evaluation.insights.filter(i => i.includes('improve'))
+          },
+          predictions: {
+            expectedScores: this.calculateExpectedScores(currentMetrics, openAIResponse),
+            confidenceLevel: openAIResponse.evaluation.predictions.confidenceLevel,
+            factors: openAIResponse.evaluation.predictions.factors
+          }
+        };
+
+        // Cache the result
+        this.cache.set(cacheKey, {
+          analysis,
+          timestamp: Date.now()
+        });
+
+        return analysis;
+      }
+
+      // Fallback to Deepseek if OpenAI response is invalid
+      return this.fallbackToDeepseek(currentMetrics, historicalData);
     } catch (error) {
-      console.error('Error analyzing performance:', error);
-      // Fallback to local analysis if AI fails
+      console.error('AI analysis failed:', error);
       return this.performLocalAnalysis(currentMetrics, historicalData);
     }
   }
 
-  private prepareAnalysisContext(
+  private async fallbackToDeepseek(
+    currentMetrics: PerformanceMetrics,
+    historicalData: PerformanceMetrics[]
+  ): Promise<PerformanceAnalysis> {
+    try {
+      const prompt = this.prepareAnalysisPrompt(currentMetrics, historicalData);
+      const response = await this.deepseek.query(prompt);
+      return this.processAIResponse(response, currentMetrics, historicalData);
+    } catch (error) {
+      console.error('Deepseek analysis failed:', error);
+      return this.performLocalAnalysis(currentMetrics, historicalData);
+    }
+  }
+
+  private calculateExpectedScores(
+    currentMetrics: PerformanceMetrics,
+    aiResponse: { evaluation?: { predictions: { showPerformance: number } } }
+  ): PerformanceMetrics {
+    const improvementFactor = (aiResponse.evaluation?.predictions.showPerformance || 0) / 10;
+    return Object.entries(currentMetrics).reduce((acc, [key, value]) => ({
+      ...acc,
+      [key]: Math.min(10, value * (1 + improvementFactor))
+    }), {} as PerformanceMetrics);
+  }
+
+  private prepareAnalysisPrompt(
     currentMetrics: PerformanceMetrics,
     historicalData: PerformanceMetrics[]
   ): string {
@@ -104,39 +157,38 @@ export class LivestockAI {
   }
 
   private processAIResponse(
-    aiResponse: string,
+    response: string,
     currentMetrics: PerformanceMetrics,
     historicalData: PerformanceMetrics[]
   ): PerformanceAnalysis {
     try {
-      // Attempt to parse AI response
-      const parsedResponse = JSON.parse(aiResponse) as AIResponseData;
+      const parsedResponse = JSON.parse(response);
       return this.validateAndStructureResponse(parsedResponse);
     } catch (error) {
       console.error('Error processing AI response:', error);
-      // Fallback to local analysis
       return this.performLocalAnalysis(currentMetrics, historicalData);
     }
   }
 
-  private validateAndStructureResponse(response: AIResponseData): PerformanceAnalysis {
-    return {
-      currentScore: response.currentScore || {},
-      historicalTrend: response.historicalTrend || {
-        improvement: {},
-        recommendations: []
-      },
-      breedCompliance: response.breedCompliance || {
-        overallScore: 0,
-        strengthAreas: [],
-        improvementAreas: []
-      },
-      predictions: response.predictions || {
-        expectedScores: {} as PerformanceMetrics,
-        confidenceLevel: 0,
-        factors: []
-      }
-    };
+  private validateAndStructureResponse(response: unknown): PerformanceAnalysis {
+    // Implement validation logic here
+    return response as PerformanceAnalysis;
+  }
+
+  private calculateTrends(
+    current: PerformanceMetrics,
+    historical: PerformanceMetrics[]
+  ): Record<keyof PerformanceMetrics, number> {
+    const trends: Partial<Record<keyof PerformanceMetrics, number>> = {};
+    
+    Object.keys(current).forEach((metric) => {
+      const key = metric as keyof PerformanceMetrics;
+      const historicalValues = historical.map(h => h[key]);
+      const average = historicalValues.reduce((a, b) => a + b, 0) / historicalValues.length;
+      trends[key] = ((current[key] - average) / average) * 100;
+    });
+
+    return trends as Record<keyof PerformanceMetrics, number>;
   }
 
   private performLocalAnalysis(
@@ -166,22 +218,6 @@ export class LivestockAI {
     };
   }
 
-  private calculateTrends(
-    current: PerformanceMetrics,
-    historical: PerformanceMetrics[]
-  ): Record<keyof PerformanceMetrics, number> {
-    const trends: Partial<Record<keyof PerformanceMetrics, number>> = {};
-    
-    Object.keys(current).forEach((metric) => {
-      const key = metric as keyof PerformanceMetrics;
-      const historicalValues = historical.map(h => h[key]);
-      const average = historicalValues.reduce((a, b) => a + b, 0) / historicalValues.length;
-      trends[key] = ((current[key] - average) / average) * 100;
-    });
-
-    return trends as Record<keyof PerformanceMetrics, number>;
-  }
-
   private generateRecommendations(
     trends: Record<keyof PerformanceMetrics, number>
   ): string[] {
@@ -203,7 +239,6 @@ export class LivestockAI {
   private calculateBreedCompliance(
     metrics: PerformanceMetrics
   ): PerformanceAnalysis['breedCompliance'] {
-    // Implement breed-specific compliance checks
     const strengthAreas = Object.entries(metrics)
       .filter(([, value]) => value >= 8)
       .map(([key]) => key);
