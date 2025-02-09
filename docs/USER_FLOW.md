@@ -2,7 +2,7 @@
 
 ## Current User Journey
 
-### 1. Authentication & Onboarding
+### 1. Authentication & Onboarding [To be implemented later]
 - User signup with email and password
 - Login with credentials
 - Token-based authentication

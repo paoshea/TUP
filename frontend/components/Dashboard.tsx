@@ -13,14 +13,19 @@ import {
   Award,
   Activity,
   BarChart,
+  Sparkles,
+  Bot,
+  Rocket
 } from 'lucide-react';
 import Link from 'next/link';
 import type { Show, Animal, Statistics } from '@/lib/types/mock';
+import { WizardPhil } from './WizardPhil';
 
 export function Dashboard() {
   const [upcomingShows, setUpcomingShows] = useState<Show[]>([]);
   const [recentAnimals, setRecentAnimals] = useState<Animal[]>([]);
   const [stats, setStats] = useState<Statistics | null>(null);
+  const [isWizardPhilOpen, setIsWizardPhilOpen] = useState(false);
 
   useEffect(() => {
     const shows = mockStore.getUpcomingShows();
@@ -34,6 +39,29 @@ export function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Feature Buttons */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+        <Button
+          size="lg"
+          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg transition-all hover:scale-105"
+          onClick={() => setIsWizardPhilOpen(true)}
+        >
+          <Sparkles className="mr-2 h-5 w-5" />
+          Featuring Now - WizardPhil
+          <Bot className="ml-2 h-5 w-5" />
+        </Button>
+
+        <Link href="/demo">
+          <Button
+            size="lg"
+            className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white shadow-lg transition-all hover:scale-105"
+          >
+            <Rocket className="mr-2 h-5 w-5" />
+            Try Demo
+          </Button>
+        </Link>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats && (
           <>
@@ -214,6 +242,9 @@ export function Dashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* WizardPhil Component */}
+      <WizardPhil />
     </div>
   );
 }
