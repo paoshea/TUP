@@ -1,4 +1,4 @@
-eimport { Types } from 'mongoose';
+import { Types } from 'mongoose';
 import { Evaluation } from '../models';
 import { BaseService } from './BaseService';
 import { ApiError } from '../utils/apiResponse';

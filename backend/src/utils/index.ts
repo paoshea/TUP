@@ -7,7 +7,7 @@ export * from './storage';
 export * from './validation';
 
 // Re-export commonly used types
-export type { ApiResponse, AppError } from '../types';
+export type { ApiResponse } from '../types';
 
 // Export commonly used constants and configurations
 export const UPLOAD_DIR = 'uploads';

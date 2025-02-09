@@ -4,11 +4,25 @@ import { EvaluationForm } from '@/components/EvaluationForm';
 import '@testing-library/jest-dom';
 
 describe('Evaluation Flow', () => {
+  const mockInitialData = {
+    id: '1',
+    scores: {
+      movement: 5,
+      conformation: 5,
+      muscleDevelopment: 5,
+      breedCharacteristics: 5
+    },
+    notes: '',
+    images: []
+  };
+
   it('completes full evaluation process', async () => {
     render(
       <>
         <FlockAnalyzer />
-        <EvaluationForm onSave={jest.fn()} />
+        <EvaluationForm 
+          onSave={jest.fn()}
+          initialData={mockInitialData} />
       </>
     );
 
@@ -50,7 +64,9 @@ describe('Evaluation Flow', () => {
     render(
       <>
         <FlockAnalyzer />
-        <EvaluationForm onSave={jest.fn()} />
+        <EvaluationForm 
+          onSave={jest.fn()}
+          initialData={mockInitialData} />
       </>
     );
 
@@ -71,7 +87,9 @@ describe('Evaluation Flow', () => {
     render(
       <>
         <FlockAnalyzer />
-        <EvaluationForm onSave={jest.fn()} />
+        <EvaluationForm 
+          onSave={jest.fn()}
+          initialData={mockInitialData} />
       </>
     );
 

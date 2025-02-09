@@ -4,13 +4,27 @@ import '@testing-library/jest-dom';
 
 describe('EvaluationForm', () => {
   const mockOnSave = jest.fn();
+  const mockInitialData = {
+    id: '1',
+    scores: {
+      movement: 5,
+      conformation: 5,
+      muscleDevelopment: 5,
+      breedCharacteristics: 5
+    },
+    notes: '',
+    images: []
+  };
 
   beforeEach(() => {
     mockOnSave.mockClear();
   });
 
   it('renders all score categories', () => {
-    render(<EvaluationForm onSave={mockOnSave} />);
+    render(<EvaluationForm 
+      onSave={mockOnSave}
+      initialData={mockInitialData}
+    />);
     
     // Check for score category labels
     expect(screen.getByText('Movement')).toBeInTheDocument();
@@ -20,7 +34,10 @@ describe('EvaluationForm', () => {
   });
 
   it('handles score changes', () => {
-    render(<EvaluationForm onSave={mockOnSave} />);
+    render(<EvaluationForm 
+      onSave={mockOnSave}
+      initialData={mockInitialData}
+    />);
     
     // Find score inputs
     const movementInput = screen.getByLabelText('Movement') as HTMLInputElement;
@@ -36,7 +53,10 @@ describe('EvaluationForm', () => {
   });
 
   it('handles notes input', () => {
-    render(<EvaluationForm onSave={mockOnSave} />);
+    render(<EvaluationForm 
+      onSave={mockOnSave}
+      initialData={mockInitialData}
+    />);
     
     const notesInput = screen.getByPlaceholderText('Add evaluation notes...') as HTMLTextAreaElement;
     const testNote = 'Excellent muscle definition and movement';
@@ -46,7 +66,10 @@ describe('EvaluationForm', () => {
   });
 
   it('handles form submission', () => {
-    render(<EvaluationForm onSave={mockOnSave} />);
+    render(<EvaluationForm 
+      onSave={mockOnSave}
+      initialData={mockInitialData}
+    />);
     
     // Fill out form
     const movementInput = screen.getByLabelText('Movement') as HTMLInputElement;
@@ -72,7 +95,10 @@ describe('EvaluationForm', () => {
   });
 
   it('validates score ranges', () => {
-    render(<EvaluationForm onSave={mockOnSave} />);
+    render(<EvaluationForm 
+      onSave={mockOnSave}
+      initialData={mockInitialData}
+    />);
     
     const movementInput = screen.getByLabelText('Movement') as HTMLInputElement;
 
@@ -86,7 +112,10 @@ describe('EvaluationForm', () => {
   });
 
   it('shows photo upload interface', () => {
-    render(<EvaluationForm onSave={mockOnSave} />);
+    render(<EvaluationForm 
+      onSave={mockOnSave}
+      initialData={mockInitialData}
+    />);
     
     expect(screen.getByText('Add Photos')).toBeInTheDocument();
   });

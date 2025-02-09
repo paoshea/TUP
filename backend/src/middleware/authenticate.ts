@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { verify } from 'jsonwebtoken';
+import { verify, JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 import { config } from '../config';
 import { Profile } from '../models';
 
@@ -56,14 +56,14 @@ export const authenticate = async (
 
     next();
   } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
+    if (error instanceof JsonWebTokenError) {
       return res.status(401).json({
         error: 'Invalid Token',
         message: 'Authentication token is invalid',
       });
     }
 
-    if (error.name === 'TokenExpiredError') {
+    if (error instanceof TokenExpiredError) {
       return res.status(401).json({
         error: 'Token Expired',
         message: 'Authentication token has expired',

@@ -1,0 +1,20 @@
+{
+  "name": "tup-livestock",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "type-check": "npm run type-check:frontend && npm run type-check:backend",
+    "type-check:frontend": "npm run type-check --workspace=frontend",
+    "type-check:backend": "npm run type-check --workspace=backend",
+    "lint": "npm run lint:frontend && npm run lint:backend",
+    "lint:frontend": "npm run lint --workspace=frontend",
+    "lint:backend": "npm run lint --workspace=backend",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build:backend": "npm run build --workspace=backend"
+  }
+}

@@ -18,6 +18,11 @@ interface PhysicalCriteria {
   breedCharacter: BreedCharacterCriteria;
 }
 
+interface CriteriaItem {
+  maxScore: number;
+  weightage: number;
+}
+
 export interface IBreedStandard extends Document {
   breed: string;
   category: string;
@@ -82,27 +87,32 @@ breedStandardSchema.index({ breed: 1, category: 1 }, { unique: true });
 
 // Methods
 breedStandardSchema.methods.calculateScore = function(
-  measurements: Record<string, number>
+  this: IBreedStandard,
+  measurements: Record<string, number>,
 ): Record<string, number> {
   const scores: Record<string, number> = {};
   
   // Calculate frame scores
-  Object.entries(this.criteria.physical.frame).forEach(([key, criteria]) => {
-    const measurement = measurements[key];
-    if (typeof measurement === 'number') {
-      const score = Math.min(measurement / criteria.maxScore * 10, 10);
-      scores[key] = score * criteria.weightage;
+  (Object.entries(this.criteria.physical.frame) as [string, CriteriaItem][]).forEach(
+    ([key, criteria]) => {
+      const measurement = measurements[key];
+      if (typeof measurement === 'number') {
+        const score = Math.min((measurement / criteria.maxScore) * 10, 10);
+        scores[key] = score * criteria.weightage;
+      }
     }
-  });
+  );
 
   // Calculate breed character scores
-  Object.entries(this.criteria.physical.breedCharacter).forEach(([key, criteria]) => {
-    const measurement = measurements[key];
-    if (typeof measurement === 'number') {
-      const score = Math.min(measurement / criteria.maxScore * 10, 10);
-      scores[key] = score * criteria.weightage;
+  (Object.entries(this.criteria.physical.breedCharacter) as [string, CriteriaItem][]).forEach(
+    ([key, criteria]) => {
+      const measurement = measurements[key];
+      if (typeof measurement === 'number') {
+        const score = Math.min((measurement / criteria.maxScore) * 10, 10);
+        scores[key] = score * criteria.weightage;
+      }
     }
-  });
+  );
 
   return scores;
 };

@@ -1,7 +1,7 @@
-export { AnimalService } from './AnimalService';
-export { AuthService } from './AuthService';
+export { AnimalService, animalService } from './AnimalService';
+export { AuthService, authService } from './AuthService';
 export { BaseService } from './BaseService';
-export { EvaluationService } from './EvaluationService';
-export { ShowService } from './ShowService';
+export { EvaluationService, evaluationService } from './EvaluationService';
+export { ShowService, showService } from './ShowService';
 export { SyncService } from './SyncService';
 export { NotificationService } from './NotificationService';

@@ -6,6 +6,11 @@ export interface AppError extends Error {
   code?: string;
 }
 
+interface MongoError extends Error {
+  code?: number;
+  keyValue?: Record<string, any>;
+}
+
 export const errorHandler = (
   err: AppError,
   req: Request,
@@ -30,7 +35,7 @@ export const errorHandler = (
   }
 
   // MongoDB Duplicate Key Error
-  if (err.code === 11000) {
+  if ((err as MongoError).code === 11000) {
     return res.status(409).json({
       error: 'Duplicate Entry',
       message: 'A record with this value already exists',

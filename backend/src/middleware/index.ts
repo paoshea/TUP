@@ -1,10 +1,12 @@
+import { Request, Response, NextFunction } from 'express';
+
 export { errorHandler } from './errorHandler';
 export { requestLogger } from './requestLogger';
 export { authenticate } from './authenticate';
 
 // Role-based access control middleware factory
 export const requireRole = (roles: string[]) => {
-  return (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({
         error: 'Authentication Required',
@@ -20,7 +22,7 @@ export const requireRole = (roles: string[]) => {
 
 // Ownership check middleware factory
 export const requireOwnership = (paramName: string) => {
-  return (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({
         error: 'Authentication Required',
@@ -28,7 +30,7 @@ export const requireOwnership = (paramName: string) => {
       });
     }
 
-    const resourceId = req.params[paramName];
+    const resourceId = (req.params as Record<string, string>)[paramName];
     if (!resourceId) {
       return res.status(400).json({
         error: 'Bad Request',
