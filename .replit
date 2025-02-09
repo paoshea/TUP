@@ -1,8 +1,16 @@
-modules = ["nodejs-20", "web"]
-run = "node index.js"
+
+run = "cd frontend && npm run dev"
+modules = ["nodejs-20:v8-20230920-bd784b9"]
 
 [nix]
 channel = "stable-24_05"
 
 [deployment]
-run = ["sh", "-c", "node index.js"]
+build = "cd frontend && npm run build"
+run = ["sh", "-c", "cd frontend && npm start"]
+deploymentTarget = "cloud"
+
+[languages]
+[languages.typescript]
+pattern = "**/{*.ts,*.js,*.tsx,*.jsx}"
+syntax = "typescript"
