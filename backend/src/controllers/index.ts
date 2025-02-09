@@ -1,4 +1,6 @@
-export * as authController from './AuthController';
-export * as animalController from './AnimalController';
-export * as evaluationController from './EvaluationController';
-export * as showController from './ShowController';
+export * from './AnimalController';
+export * from './AuthController';
+export * from './EvaluationController';
+export * from './ShowController';
+export * from './SyncController';
+export * from './NotificationController';

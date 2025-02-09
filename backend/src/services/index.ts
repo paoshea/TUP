@@ -1,15 +1,7 @@
-export { authService } from './AuthService';
-export { animalService } from './AnimalService';
-export { evaluationService } from './EvaluationService';
-export { showService } from './ShowService';
-
-// Export service types
-export type { IShow } from '../models/Show';
-export type { IShowEntry } from '../models/ShowEntry';
-export type { IShowResult } from '../models/ShowResult';
-export type { IAnimal } from '../models/Animal';
-export type { IEvaluation } from '../models/Evaluation';
-export type { IProfile } from '../models/Profile';
-
-// Export base service for extension
+export { AnimalService } from './AnimalService';
+export { AuthService } from './AuthService';
 export { BaseService } from './BaseService';
+export { EvaluationService } from './EvaluationService';
+export { ShowService } from './ShowService';
+export { SyncService } from './SyncService';
+export { NotificationService } from './NotificationService';

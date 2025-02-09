@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from 'mongoose';
+import { Schema, model, Document, Types, Model } from 'mongoose';
 import { IProfile } from './Profile';
 
 type NotificationType = 'evaluation' | 'show' | 'sync' | 'system';
@@ -13,6 +13,34 @@ export interface INotification extends Document {
   status: NotificationStatus;
   created_at: Date;
   sent_at?: Date;
+  // Instance methods
+  markAsSent(): Promise<void>;
+  markAsFailed(): Promise<void>;
+}
+
+// Static methods interface
+interface INotificationModel extends Model<INotification> {
+  createEvaluationNotification(
+    userId: Types.ObjectId,
+    evaluationId: Types.ObjectId,
+    animalName: string
+  ): Promise<INotification>;
+  createShowNotification(
+    userId: Types.ObjectId,
+    showId: Types.ObjectId,
+    showName: string,
+    message: string
+  ): Promise<INotification>;
+  createSyncNotification(
+    userId: Types.ObjectId,
+    conflictId: Types.ObjectId
+  ): Promise<INotification>;
+  createSystemNotification(
+    userId: Types.ObjectId,
+    title: string,
+    message: string,
+    data?: Record<string, any>
+  ): Promise<INotification>;
 }
 
 const notificationSchema = new Schema<INotification>({
@@ -126,4 +154,4 @@ notificationSchema.statics.createSystemNotification = async function(
   });
 };
 
-export const Notification = model<INotification>('Notification', notificationSchema);
+export const Notification = model<INotification, INotificationModel>('Notification', notificationSchema);

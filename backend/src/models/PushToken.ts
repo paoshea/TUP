@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from 'mongoose';
+import { Schema, model, Document, Types, Model } from 'mongoose';
 import { IProfile } from './Profile';
 
 type Platform = 'ios' | 'android' | 'web';
@@ -9,6 +9,15 @@ export interface IPushToken extends Document {
   platform: Platform;
   created_at: Date;
   last_used: Date;
+  // Instance methods
+  updateLastUsed(): Promise<void>;
+  isExpired(expirationDays?: number): boolean;
+}
+
+// Static methods interface
+interface IPushTokenModel extends Model<IPushToken> {
+  cleanupExpiredTokens(expirationDays?: number): Promise<any>;
+  findValidTokensForUser(userId: Types.ObjectId): Promise<IPushToken[]>;
 }
 
 const pushTokenSchema = new Schema<IPushToken>({
@@ -73,4 +82,4 @@ pushTokenSchema.statics.findValidTokensForUser = async function(userId: Types.Ob
   }).sort({ last_used: -1 });
 };
 
-export const PushToken = model<IPushToken>('PushToken', pushTokenSchema);
+export const PushToken = model<IPushToken, IPushTokenModel>('PushToken', pushTokenSchema);

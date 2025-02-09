@@ -3,6 +3,7 @@ import { fontFamily } from "tailwindcss/defaultTheme";
 import animate from "tailwindcss-animate";
 import typography from "@tailwindcss/typography";
 import forms from "@tailwindcss/forms";
+import type { PluginAPI } from 'tailwindcss/types/config';
 
 export default {
   darkMode: ["class"],
@@ -14,12 +15,40 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: {
+        DEFAULT: "1rem",
+        sm: "2rem",
+        lg: "4rem",
+        xl: "5rem",
+        "2xl": "6rem",
+      },
       screens: {
+        xs: "375px",
+        sm: "640px",
+        md: "768px",
+        lg: "1024px",
+        xl: "1280px",
         "2xl": "1400px",
       },
     },
     extend: {
+      screens: {
+        'xs': '375px',
+        'sm': '640px',
+        'md': '768px',
+        'lg': '1024px',
+        'xl': '1280px',
+        '2xl': '1400px',
+        'touch': { raw: '(hover: none) and (pointer: coarse)' },
+        'stylus': { raw: '(hover: none) and (pointer: fine)' },
+        'mouse': { raw: '(hover: hover) and (pointer: fine)' },
+      },
+      spacing: {
+        'safe-top': 'env(safe-area-inset-top)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+        'safe-left': 'env(safe-area-inset-left)',
+        'safe-right': 'env(safe-area-inset-right)',
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -72,12 +101,43 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "slide-from-left": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(0)" },
+        },
+        "slide-to-left": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-100%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "slide-from-left": "slide-from-left 0.3s ease-out",
+        "slide-to-left": "slide-to-left 0.3s ease-out",
       },
     },
   },
-  plugins: [animate, typography, forms],
+  plugins: [
+    animate,
+    typography,
+    forms,
+    function({ addUtilities }: PluginAPI) {
+      addUtilities({
+        '.touch-callout-none': {
+          '-webkit-touch-callout': 'none',
+        },
+        '.content-visibility-auto': {
+          'content-visibility': 'auto',
+        },
+        '.scrollbar-none': {
+          '-ms-overflow-style': 'none',
+          'scrollbar-width': 'none',
+          '&::-webkit-scrollbar': {
+            display: 'none',
+          },
+        },
+      });
+    },
+  ],
 } satisfies Config;

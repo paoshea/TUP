@@ -23,6 +23,11 @@ export interface Config {
     maxFileSize: number;
     allowedTypes: string[];
   };
+  sync: {
+    batchSize: number;
+    interval: number;
+    maxRetries: number;
+  };
 }
 
 export const config: Config = {
@@ -34,7 +39,6 @@ export const config: Config = {
   mongodb: {
     uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/livestock',
     options: {
-      // These options are now properly typed through ConnectOptions
       minPoolSize: 5,
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
@@ -49,5 +53,10 @@ export const config: Config = {
     uploadDir: process.env.UPLOAD_DIR || 'uploads',
     maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10), // 5MB
     allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+  },
+  sync: {
+    batchSize: parseInt(process.env.SYNC_BATCH_SIZE || '100', 10),
+    interval: parseInt(process.env.SYNC_INTERVAL || '5000', 10),
+    maxRetries: parseInt(process.env.SYNC_MAX_RETRIES || '3', 10),
   },
 };
