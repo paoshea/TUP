@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { Textarea } from './ui/textarea';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
 import {
   Form,
   FormControl,
@@ -37,19 +38,47 @@ interface EvaluationFormProps {
 }
 
 export function EvaluationForm({ initialData, onSave }: EvaluationFormProps) {
+  const { isOnline, saveOffline } = useOfflineSync();
+  const [isSaving, setIsSaving] = useState(false);
   const form = useForm<EvaluationFormData>({
     resolver: zodResolver(evaluationSchema),
     defaultValues: initialData,
   });
 
-  const onSubmit = (data: EvaluationFormData) => {
-    onSave(data);
+  const onSubmit = async (data: EvaluationFormData) => {
+    setIsSaving(true);
+    try {
+      if (isOnline) {
+        await onSave(data);
+      } else {
+        await saveOffline<EvaluationFormData>(
+          'evaluation',
+          data.id === initialData.id ? 'update' : 'create',
+          data.id,
+          data
+        );
+        // Show offline save notification
+        alert('Evaluation saved offline. Will sync when back online.');
+      }
+    } catch (error) {
+      console.error('Error saving evaluation:', error);
+      alert('Error saving evaluation. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
-    <Card>
+    <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Animal Evaluation</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle>Animal Evaluation</CardTitle>
+          {!isOnline && (
+            <span className="text-sm text-yellow-600 bg-yellow-50 px-2 py-1 rounded">
+              Offline Mode - Changes will sync when online
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -191,8 +220,21 @@ export function EvaluationForm({ initialData, onSave }: EvaluationFormProps) {
               )}
             />
 
-            <div className="flex justify-end">
-              <Button type="submit">Save Evaluation</Button>
+            <div className="flex justify-end space-x-4">
+              <Button 
+                variant="outline" 
+                type="button" 
+                onClick={() => form.reset()}
+                disabled={isSaving}
+              >
+                Reset
+              </Button>
+              <Button 
+                type="submit"
+                disabled={isSaving || !form.formState.isValid}
+              >
+                {isSaving ? 'Saving...' : 'Save Evaluation'}
+              </Button>
             </div>
           </form>
         </Form>

@@ -1,3 +1,5 @@
+// frontend/components/WizardPhil.tsx
+
 "use client";
 
 import React, { useState } from 'react';
@@ -13,13 +15,31 @@ import {
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Bot, Send, Sparkles } from 'lucide-react';
+import { Bot, Send, Sparkles, TrendingUp, Award, LineChart } from 'lucide-react';
+import { aiService } from '@/services/ai';
+import { livestockAI } from '@/services/livestockAI';
+import { Badge } from './ui/badge';
 
 interface Message {
   id: string;
   type: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  analysis?: {
+    metrics?: {
+      movement: number;
+      conformation: number;
+      muscleDevelopment: number;
+      breedCharacteristics: number;
+    };
+    recommendations?: string[];
+    trends?: Record<string, number>;
+    compliance?: {
+      score: number;
+      strengths: string[];
+      improvements: string[];
+    };
+  };
 }
 
 export function WizardPhil() {
@@ -28,13 +48,16 @@ export function WizardPhil() {
     {
       id: '1',
       type: 'assistant',
-      content: 'Hi! I\'m WizardPhil, your livestock show assistant. How can I help you today?',
+      content: "Hi! I'm WizardPhil, your AI-powered livestock show assistant. I can help with performance analysis, breed standards, and show preparation. How can I assist you today?",
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState('');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [relatedTopics, setRelatedTopics] = useState<string[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
 
     // Add user message
@@ -47,48 +70,85 @@ export function WizardPhil() {
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setIsAnalyzing(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const assistantMessage: Message = {
+    try {
+      // Get basic response
+      const response = await aiService.processMessage(input);
+
+      // Check for analysis keywords
+      if (input.toLowerCase().includes('analysis') || 
+          input.toLowerCase().includes('performance') ||
+          input.toLowerCase().includes('evaluation')) {
+        // Mock data for demo - replace with actual data in production
+        const mockCurrentMetrics = {
+          movement: 8,
+          conformation: 7,
+          muscleDevelopment: 9,
+          breedCharacteristics: 8
+        };
+        const mockHistoricalData = [
+          {
+            movement: 7,
+            conformation: 6,
+            muscleDevelopment: 8,
+            breedCharacteristics: 7
+          }
+        ];
+
+        const analysis = await livestockAI.analyzePerformance(
+          'demo-animal-id',
+          mockCurrentMetrics,
+          mockHistoricalData
+        );
+
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: response.content,
+          timestamp: new Date(),
+          analysis: {
+            metrics: analysis.currentScore,
+            recommendations: analysis.historicalTrend.recommendations,
+            trends: analysis.historicalTrend.improvement,
+            compliance: {
+              score: analysis.breedCompliance.overallScore,
+              strengths: analysis.breedCompliance.strengthAreas,
+              improvements: analysis.breedCompliance.improvementAreas
+            }
+          }
+        };
+
+        setMessages(prev => [...prev, assistantMessage]);
+        setSuggestions(analysis.predictions.factors);
+        setRelatedTopics(['Performance Trends', 'Breed Standards', 'Training Plans']);
+      } else {
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: response.content,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+        setSuggestions(response.suggestions || []);
+        setRelatedTopics(response.relatedTopics || []);
+      }
+    } catch (error) {
+      console.error('Error processing message:', error);
+      const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: getAIResponse(input),
+        content: "I'm having trouble processing your request. Please try again.",
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, assistantMessage]);
-    }, 1000);
-  };
-
-  const getAIResponse = (userInput: string): string => {
-    // Simple keyword-based responses
-    if (userInput.toLowerCase().includes('checklist')) {
-      return "I'll help you prepare for your show. Here's your checklist status: You have 5 pending tasks and 3 completed tasks.";
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsAnalyzing(false);
     }
-    if (userInput.toLowerCase().includes('evaluation')) {
-      return "Looking at your recent evaluations, your animal's conformation score has improved by 15% in the last month.";
-    }
-    if (userInput.toLowerCase().includes('show')) {
-      return "There are 3 upcoming shows in your region. The next one is in 2 weeks. Would you like to review the preparation checklist?";
-    }
-    if (userInput.toLowerCase().includes('breed')) {
-      return "Based on your animal's breed standards, here are the key areas to focus on: movement patterns, muscle development, and coat condition.";
-    }
-
-    // Default responses for other queries
-    const responses = [
-      "I can help you prepare for your upcoming show. Would you like to review the checklist?",
-      "Let me analyze your recent evaluation data to provide some insights.",
-      "I can help you track your animal's progress. Would you like to see the latest statistics?",
-      "Here are some tips for improving your show presentation techniques.",
-      "Would you like to review the regional show schedule and requirements?",
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
   };
 
   return (
     <>
-      {/* Floating Button */}
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>
           <Button
@@ -110,8 +170,7 @@ export function WizardPhil() {
             </SheetDescription>
           </SheetHeader>
 
-          {/* Messages Area */}
-          <ScrollArea className="h-[calc(100vh-200px)] pr-4">
+          <ScrollArea className="h-[calc(100vh-280px)] pr-4">
             <div className="flex flex-col gap-4 py-4">
               {messages.map((message) => (
                 <div
@@ -130,22 +189,123 @@ export function WizardPhil() {
                       <AvatarFallback>You</AvatarFallback>
                     </Avatar>
                   )}
-                  <div
-                    className={`rounded-lg px-4 py-2 max-w-[80%] ${
-                      message.type === 'assistant'
-                        ? 'bg-muted'
-                        : 'bg-primary text-primary-foreground'
-                    }`}
-                  >
-                    <p className="text-sm">{message.content}</p>
-                    <p className="text-xs opacity-70 mt-1">
-                      {message.timestamp.toLocaleTimeString()}
-                    </p>
+                  <div className="space-y-4 max-w-[80%]">
+                    <div
+                      className={`rounded-lg px-4 py-2 ${
+                        message.type === 'assistant'
+                          ? 'bg-muted'
+                          : 'bg-primary text-primary-foreground'
+                      }`}
+                    >
+                      <p className="text-sm">{message.content}</p>
+                      <p className="text-xs opacity-70 mt-1">
+                        {message.timestamp.toLocaleTimeString()}
+                      </p>
+                    </div>
+
+                    {message.analysis && (
+                      <div className="bg-muted rounded-lg p-4 space-y-3">
+                        {message.analysis.metrics && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <TrendingUp className="h-4 w-4" />
+                              <h4 className="font-medium">Current Metrics</h4>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              {Object.entries(message.analysis.metrics).map(([key, value]) => (
+                                <div key={key} className="flex justify-between">
+                                  <span className="text-sm">{key}:</span>
+                                  <span className="text-sm font-medium">{value}/10</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {message.analysis.compliance && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Award className="h-4 w-4" />
+                              <h4 className="font-medium">Breed Compliance</h4>
+                            </div>
+                            <p className="text-sm mb-2">
+                              Overall Score: {message.analysis.compliance.score.toFixed(1)}/10
+                            </p>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium">Strengths:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {message.analysis.compliance.strengths.map((strength, i) => (
+                                  <Badge key={i} variant="secondary">{strength}</Badge>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {message.analysis.trends && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <LineChart className="h-4 w-4" />
+                              <h4 className="font-medium">Performance Trends</h4>
+                            </div>
+                            <div className="space-y-1">
+                              {Object.entries(message.analysis.trends).map(([key, value]) => (
+                                <div key={key} className="flex justify-between">
+                                  <span className="text-sm">{key}:</span>
+                                  <span className={`text-sm font-medium ${value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {value >= 0 ? '+' : ''}{value.toFixed(1)}%
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
+              {isAnalyzing && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="animate-spin">⚬</span>
+                  Analyzing...
+                </div>
+              )}
             </div>
           </ScrollArea>
+
+          {/* Suggestions and Topics */}
+          {(suggestions.length > 0 || relatedTopics.length > 0) && (
+            <div className="px-4 py-2 border-t">
+              {suggestions.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-sm font-medium mb-1">Suggestions:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestions.map((suggestion, index) => (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setInput(suggestion)}
+                      >
+                        {suggestion}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {relatedTopics.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-1">Related Topics:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {relatedTopics.map((topic, index) => (
+                      <Badge key={index} variant="secondary">{topic}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Input Area */}
           <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t">
@@ -160,8 +320,9 @@ export function WizardPhil() {
                 placeholder="Ask me anything..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
+                disabled={isAnalyzing}
               />
-              <Button type="submit" size="icon">
+              <Button type="submit" size="icon" disabled={isAnalyzing}>
                 <Send className="h-4 w-4" />
                 <span className="sr-only">Send message</span>
               </Button>

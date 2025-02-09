@@ -1,0 +1,39 @@
+{
+  "name": "TUP Livestock Management System",
+  "short_name": "TUP Livestock",
+  "description": "A comprehensive livestock management system for show animals",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#007bff",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "orientation": "any",
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "New Evaluation",
+      "url": "/evaluations/new",
+      "description": "Start a new animal evaluation"
+    },
+    {
+      "name": "View Animals",
+      "url": "/animals",
+      "description": "View your livestock"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
