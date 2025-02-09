@@ -1,165 +1,165 @@
-interface AIResponse {
+import { openai, type AIResponse } from './openai';
+
+interface ProcessedResponse {
   content: string;
-  confidence: number;
   suggestions?: string[];
   relatedTopics?: string[];
 }
 
-interface AIContext {
-  recentMessages: Array<{
-    role: 'user' | 'assistant';
-    content: string;
-  }>;
-  userProfile?: {
-    expertise: string;
-    preferences: Record<string, unknown>;
-  };
-  animalContext?: {
-    breed: string;
-    age: number;
-    recentEvaluations: Array<Record<string, unknown>>;
-  };
-}
+class AIService {
+  private static instance: AIService;
 
-export class AIService {
-  private context: AIContext = {
-    recentMessages: []
-  };
+  private constructor() {}
 
-  constructor() {
-    // Initialize with empty context
-    this.loadContext();
+  static getInstance(): AIService {
+    if (!this.instance) {
+      this.instance = new AIService();
+    }
+    return this.instance;
   }
 
-  private async loadContext() {
+  async processMessage(input: string): Promise<ProcessedResponse> {
     try {
-      // Load user preferences from localStorage
-      const savedContext = localStorage.getItem('aiContext');
-      if (savedContext) {
-        this.context = JSON.parse(savedContext);
+      // Determine message type
+      const isAnalysisRequest = input.toLowerCase().includes('analysis') ||
+                               input.toLowerCase().includes('evaluate') ||
+                               input.toLowerCase().includes('performance');
+
+      const isPhotoRequest = input.toLowerCase().includes('photo') ||
+                            input.toLowerCase().includes('picture') ||
+                            input.toLowerCase().includes('image');
+
+      const isShowRequest = input.toLowerCase().includes('show') ||
+                           input.toLowerCase().includes('competition') ||
+                           input.toLowerCase().includes('event');
+
+      // Process with appropriate AI service
+      if (isAnalysisRequest) {
+        const response = await openai.analyze('evaluation', { query: input });
+        return {
+          content: this.formatAnalysisResponse(response),
+          suggestions: response.evaluation?.recommendations || [],
+          relatedTopics: ['Performance Analysis', 'Training Tips', 'Improvement Areas']
+        };
       }
+
+      if (isPhotoRequest) {
+        const response = await openai.analyze('photo', { query: input });
+        return {
+          content: this.formatPhotoResponse(response),
+          suggestions: response.photo?.conformation.issues || [],
+          relatedTopics: ['Photo Analysis', 'Breed Standards', 'Conformation']
+        };
+      }
+
+      if (isShowRequest) {
+        const response = await openai.analyze('show', { query: input });
+        return {
+          content: this.formatShowResponse(response),
+          suggestions: response.show?.preparation.checklist || [],
+          relatedTopics: ['Show Preparation', 'Competition Tips', 'Training Schedule']
+        };
+      }
+
+      // Default response for general queries
+      return this.getDefaultResponse();
     } catch (error) {
-      console.error('Error loading AI context:', error);
+      console.error('Error processing message:', error);
+      return {
+        content: 'I apologize, but I encountered an error processing your request. Please try again.',
+        suggestions: ['Try a simpler query', 'Check help documentation', 'Contact support'],
+        relatedTopics: ['Troubleshooting', 'Help', 'Support']
+      };
     }
   }
 
-  private saveContext() {
-    try {
-      localStorage.setItem('aiContext', JSON.stringify(this.context));
-    } catch (error) {
-      console.error('Error saving AI context:', error);
+  private formatAnalysisResponse(response: AIResponse): string {
+    if (!response.evaluation) {
+      return 'I apologize, but I could not generate a proper analysis. Please try again.';
     }
+
+    const { insights, recommendations, predictions } = response.evaluation;
+    return `
+      Based on my analysis:
+      
+      Key Insights:
+      ${insights.map((insight: string) => `- ${insight}`).join('\n')}
+      
+      Recommendations:
+      ${recommendations.map((rec: string) => `- ${rec}`).join('\n')}
+      
+      Performance Prediction:
+      Show Performance Score: ${predictions.showPerformance}/10
+      Confidence Level: ${predictions.confidenceLevel * 100}%
+      
+      Would you like to explore any specific aspect in more detail?
+    `;
   }
 
-  private updateContext(message: { role: 'user' | 'assistant'; content: string }) {
-    this.context.recentMessages.push(message);
-    // Keep only last 10 messages for context
-    if (this.context.recentMessages.length > 10) {
-      this.context.recentMessages.shift();
+  private formatPhotoResponse(response: AIResponse): string {
+    if (!response.photo) {
+      return 'I apologize, but I could not analyze the photo properly. Please try again.';
     }
-    this.saveContext();
+
+    const { conformation, muscleDevelopment, breedCharacteristics } = response.photo;
+    return `
+      Photo Analysis Results:
+      
+      Conformation (${conformation.score}/10):
+      ${conformation.issues.map((issue: string) => `- ${issue}`).join('\n')}
+      
+      Muscle Development (${muscleDevelopment.score}/10):
+      Strengths:
+      ${muscleDevelopment.strengths.map((strength: string) => `- ${strength}`).join('\n')}
+      
+      Breed Characteristics (${breedCharacteristics.score}/10):
+      Matching Traits:
+      ${breedCharacteristics.matching.map((trait: string) => `- ${trait}`).join('\n')}
+      
+      Would you like specific recommendations for improvement?
+    `;
   }
 
-  async processMessage(message: string): Promise<AIResponse> {
-    // Add message to context
-    this.updateContext({ role: 'user', content: message });
+  private formatShowResponse(response: AIResponse): string {
+    if (!response.show) {
+      return 'I apologize, but I could not generate show preparation advice. Please try again.';
+    }
 
-    // Process message with context
-    const response = await this.generateResponse(message);
-
-    // Update context with response
-    this.updateContext({ role: 'assistant', content: response.content });
-
-    return response;
+    const { readiness, preparation, strategy } = response.show;
+    return `
+      Show Preparation Analysis:
+      
+      Readiness Level: ${readiness.score}/10
+      
+      Key Preparation Steps:
+      ${preparation.checklist.map((step: string) => `- ${step}`).join('\n')}
+      
+      Strategy Recommendations:
+      ${strategy.recommendations.map((rec: string) => `- ${rec}`).join('\n')}
+      
+      Would you like to focus on any specific aspect of show preparation?
+    `;
   }
 
-  private async generateResponse(message: string): Promise<AIResponse> {
-    const lowercaseMessage = message.toLowerCase();
-    
-    // Enhanced keyword matching with context awareness
-    const response: AIResponse = {
-      content: '',
-      confidence: 0.8,
-      suggestions: [],
-      relatedTopics: []
-    };
-
-    if (lowercaseMessage.includes('checklist')) {
-      response.content = "Based on your upcoming show schedule, here's your personalized checklist status:\n" +
-        "- Equipment preparation: 80% complete\n" +
-        "- Health documentation: Pending vaccination update\n" +
-        "- Training milestones: On track\n" +
-        "Would you like to focus on any specific area?";
-      response.suggestions = [
-        "Review equipment list",
-        "Check health requirements",
-        "View training schedule"
-      ];
-      response.relatedTopics = ["Show Preparation", "Health Records", "Training Plans"];
-    }
-    else if (lowercaseMessage.includes('evaluation')) {
-      response.content = "Analyzing your recent evaluations:\n" +
-        "- Movement score trend: +15% improvement\n" +
-        "- Conformation consistency: High\n" +
-        "- Areas for focus: Muscle definition\n" +
-        "Would you like a detailed analysis of any specific aspect?";
-      response.suggestions = [
-        "View trend graphs",
-        "Compare to breed standards",
-        "Set new goals"
-      ];
-      response.relatedTopics = ["Performance Metrics", "Breed Standards", "Goal Setting"];
-    }
-    else if (lowercaseMessage.includes('show')) {
-      response.content = "Here's your show schedule overview:\n" +
-        "- Next show: Regional Championship (2 weeks)\n" +
-        "- Required preparations: 75% complete\n" +
-        "- Weather forecast: Favorable\n" +
-        "Would you like to review specific show requirements?";
-      response.suggestions = [
-        "View show details",
-        "Check requirements",
-        "See preparation status"
-      ];
-      response.relatedTopics = ["Show Rules", "Weather Updates", "Travel Plans"];
-    }
-    else if (lowercaseMessage.includes('breed')) {
-      response.content = "Based on your breed standards analysis:\n" +
-        "- Current conformity: 85%\n" +
-        "- Key focus areas: Movement patterns\n" +
-        "- Breed-specific tips available\n" +
-        "Would you like to explore any specific aspect?";
-      response.suggestions = [
-        "View breed standards",
-        "Compare measurements",
-        "See improvement tips"
-      ];
-      response.relatedTopics = ["Breed History", "Standard Updates", "Expert Tips"];
-    }
-    else {
-      // Generate contextual response based on recent conversation
-      response.content = this.generateContextualResponse();
-      response.suggestions = [
-        "Review recent progress",
-        "Check upcoming tasks",
-        "View recommendations"
-      ];
-      response.relatedTopics = ["General Care", "Training Tips", "Show Preparation"];
-    }
-
-    return response;
-  }
-
-  private generateContextualResponse(): string {
+  private getDefaultResponse(): ProcessedResponse {
     const responses = [
-      "Based on your recent activities, here are some personalized recommendations for show preparation.",
-      "I notice you've been focusing on training. Would you like some advanced techniques to try?",
-      "Your recent evaluation scores show promising trends. Let's review the details.",
-      "I can help you optimize your show preparation routine. What aspect would you like to focus on?",
-      "Looking at your schedule, now might be a good time to review your show strategy."
+      "I can help you with performance analysis, photo evaluation, and show preparation. What would you like to explore?",
+      "Let me assist you with your livestock management needs. Would you like to analyze performance data or evaluate photos?",
+      "I'm here to help with evaluations, show preparation, and training recommendations. What area should we focus on?",
+      "How can I assist you today? I can analyze performance, evaluate photos, or help with show preparation."
     ];
-    return responses[Math.floor(Math.random() * responses.length)];
+    
+    return {
+      content: responses[Math.floor(Math.random() * responses.length)],
+      suggestions: [
+        'Analyze performance',
+        'Upload a photo',
+        'Check show preparation',
+        'View training tips'
+      ],
+      relatedTopics: ['General Help', 'Quick Start', 'Features']
+    };
   }
 }
 
-export const aiService = new AIService();
+export const aiService = AIService.getInstance();

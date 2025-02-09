@@ -14,6 +14,7 @@ import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Bot, Send, Sparkles, TrendingUp, Award, LineChart, Mic, Camera } from 'lucide-react';
+import Image from 'next/image';
 import { aiService } from '@/services/ai';
 import { livestockAI } from '@/services/livestockAI';
 import { photoAnalysis } from '@/services/photoAnalysis';
@@ -373,10 +374,13 @@ export function WizardPhil() {
                               <Camera className="h-4 w-4" />
                               <h4 className="font-medium">Photo Analysis</h4>
                             </div>
-                            <img
+                            <Image
                               src={message.analysis.photoAnalysis.url}
                               alt="Analyzed photo"
-                              className="w-full rounded-lg mb-2"
+                              width={500}
+                              height={300}
+                              className="w-full h-auto rounded-lg mb-2"
+                              priority
                             />
                             <div className="space-y-2">
                               <div>

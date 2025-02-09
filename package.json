@@ -15,7 +15,10 @@
     "lint:backend": "npm run lint --workspace=backend",
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "npm run build --workspace=frontend",
-    "build:backend": "npm run build --workspace=backend"
+    "build:backend": "npm run build --workspace=backend",
+    "test": "npm run test:frontend && npm run test:backend",
+    "test:frontend": "npm run test --workspace=frontend",
+    "test:backend": "npm run test --workspace=backend"
   },
   "dependencies": {
     "@types/recharts": "^1.8.29",

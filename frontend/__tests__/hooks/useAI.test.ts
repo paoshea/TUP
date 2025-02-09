@@ -1,154 +1,171 @@
 import { renderHook, act } from '@testing-library/react';
 import { useAI } from '@/hooks/useAI';
-import { ai } from '@/services/ai';
+import { aiService } from '@/services/ai';
+import type { Animal } from '@/types';
 
 // Mock the AI service
 jest.mock('@/services/ai', () => ({
-  ai: {
-    analyzeAnimal: jest.fn(),
-    getRecommendations: jest.fn(),
-    compareWithHistorical: jest.fn(),
-  },
+  aiService: {
+    processMessage: jest.fn()
+  }
 }));
 
 describe('useAI', () => {
-  const mockAnimal = {
+  const mockAnimal: Animal = {
     id: '123',
     name: 'Test Animal',
-    category: 'Sheep',
-    breed: 'Suffolk',
-    region: 'Highland',
+    breed: 'Test Breed',
+    category: 'livestock',
+    region: 'test-region',
     scores: {
       movement: 8,
       conformation: 7,
       muscleDevelopment: 9,
-      breedCharacteristics: 8,
-    },
-    notes: 'Test notes',
-    images: [],
+      breedCharacteristics: 8
+    }
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('initializes with no error and not loading', () => {
+  it('should initialize with default state', () => {
     const { result } = renderHook(() => useAI());
-    expect(result.current.error).toBeNull();
+
+    expect(result.current.analysis).toBeNull();
     expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBeNull();
   });
 
-  it('handles animal analysis', async () => {
-    const mockAnalysis = {
-      score: 85,
-      recommendations: ['Improve movement'],
-      comparisons: [
-        {
-          flockName: 'Test Flock',
-          similarity: 90,
-          strengths: ['Good conformation'],
-          improvements: ['Work on movement'],
-        },
-      ],
+  it('should analyze animal successfully', async () => {
+    const mockResponse = {
+      content: 'Analysis complete',
+      suggestions: ['Suggestion 1', 'Suggestion 2'],
+      relatedTopics: ['Topic 1', 'Topic 2']
     };
 
-    (ai.analyzeAnimal as jest.Mock).mockResolvedValueOnce(mockAnalysis);
+    (aiService.processMessage as jest.Mock).mockResolvedValueOnce(mockResponse);
 
     const { result } = renderHook(() => useAI());
 
-    let analysis;
     await act(async () => {
-      analysis = await result.current.analyzeAnimal(mockAnimal);
+      await result.current.analyzeAnimal(mockAnimal);
     });
 
-    expect(analysis).toEqual(mockAnalysis);
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
-    expect(ai.analyzeAnimal).toHaveBeenCalledWith(mockAnimal);
+    expect(result.current.analysis).toEqual({
+      insights: ['Suggestion 1', 'Suggestion 2'],
+      recommendations: ['Topic 1', 'Topic 2'],
+      confidence: 0.8
+    });
   });
 
-  it('handles recommendations retrieval', async () => {
-    const mockRecommendations = ['Focus on movement', 'Improve muscle definition'];
-    (ai.getRecommendations as jest.Mock).mockResolvedValueOnce(mockRecommendations);
+  it('should get recommendations successfully', async () => {
+    const mockResponse = {
+      content: 'Recommendations',
+      suggestions: ['Rec 1', 'Rec 2']
+    };
+
+    (aiService.processMessage as jest.Mock).mockResolvedValueOnce(mockResponse);
 
     const { result } = renderHook(() => useAI());
+    let recommendations: string[] = [];
 
-    let recommendations;
     await act(async () => {
       recommendations = await result.current.getRecommendations('123');
     });
 
-    expect(recommendations).toEqual(mockRecommendations);
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
-    expect(ai.getRecommendations).toHaveBeenCalledWith('123');
+    expect(recommendations).toEqual(['Rec 1', 'Rec 2']);
   });
 
-  it('handles historical comparison', async () => {
-    const mockComparison = {
-      similarFlocks: ['Test Flock 1', 'Test Flock 2'],
-      analysis: 'Test analysis',
+  it('should compare with historical data successfully', async () => {
+    const mockResponse = {
+      content: 'Historical comparison',
+      suggestions: ['Improvement 1', 'Improvement 2'],
+      relatedTopics: ['Prediction 1', 'Prediction 2']
     };
-    (ai.compareWithHistorical as jest.Mock).mockResolvedValueOnce(mockComparison);
+
+    (aiService.processMessage as jest.Mock).mockResolvedValueOnce(mockResponse);
 
     const { result } = renderHook(() => useAI());
-
     let comparison;
+
     await act(async () => {
       comparison = await result.current.compareWithHistorical('123');
     });
 
-    expect(comparison).toEqual(mockComparison);
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
-    expect(ai.compareWithHistorical).toHaveBeenCalledWith('123');
+    expect(comparison).toEqual({
+      improvements: ['Improvement 1', 'Improvement 2'],
+      trends: {},
+      predictions: ['Prediction 1', 'Prediction 2']
+    });
   });
 
-  it('handles analysis error', async () => {
-    const error = new Error('Analysis failed');
-    (ai.analyzeAnimal as jest.Mock).mockRejectedValueOnce(error);
+  it('should handle analysis error', async () => {
+    const mockError = new Error('Analysis failed');
+    (aiService.processMessage as jest.Mock).mockRejectedValueOnce(mockError);
 
     const { result } = renderHook(() => useAI());
 
-    await expect(
-      act(async () => {
-        await result.current.analyzeAnimal(mockAnimal);
-      })
-    ).rejects.toThrow('Analysis failed');
+    await act(async () => {
+      await result.current.analyzeAnimal(mockAnimal);
+    });
 
     expect(result.current.loading).toBe(false);
-    expect(result.current.error).toEqual(error);
+    expect(result.current.error).toEqual(mockError);
+    expect(result.current.analysis).toBeNull();
   });
 
-  it('handles recommendations error', async () => {
-    const error = new Error('Recommendations failed');
-    (ai.getRecommendations as jest.Mock).mockRejectedValueOnce(error);
+  it('should handle recommendations error', async () => {
+    const mockError = new Error('Failed to get recommendations');
+    (aiService.processMessage as jest.Mock).mockRejectedValueOnce(mockError);
 
     const { result } = renderHook(() => useAI());
+    let recommendations: string[] = [];
 
-    await expect(
-      act(async () => {
-        await result.current.getRecommendations('123');
-      })
-    ).rejects.toThrow('Recommendations failed');
+    await act(async () => {
+      recommendations = await result.current.getRecommendations('123');
+    });
 
     expect(result.current.loading).toBe(false);
-    expect(result.current.error).toEqual(error);
+    expect(result.current.error).toEqual(mockError);
+    expect(recommendations).toEqual([]);
   });
 
-  it('handles historical comparison error', async () => {
-    const error = new Error('Historical comparison failed');
-    (ai.compareWithHistorical as jest.Mock).mockRejectedValueOnce(error);
+  it('should handle historical comparison error', async () => {
+    const mockError = new Error('Failed to compare historical data');
+    (aiService.processMessage as jest.Mock).mockRejectedValueOnce(mockError);
 
     const { result } = renderHook(() => useAI());
+    let comparison;
 
-    await expect(
-      act(async () => {
-        await result.current.compareWithHistorical('123');
-      })
-    ).rejects.toThrow('Historical comparison failed');
+    await act(async () => {
+      comparison = await result.current.compareWithHistorical('123');
+    });
 
     expect(result.current.loading).toBe(false);
-    expect(result.current.error).toEqual(error);
+    expect(result.current.error).toEqual(mockError);
+    expect(comparison).toEqual({
+      improvements: [],
+      trends: {},
+      predictions: []
+    });
+  });
+
+  it('should reset analysis state', () => {
+    const { result } = renderHook(() => useAI());
+
+    act(() => {
+      result.current.resetAnalysis();
+    });
+
+    expect(result.current.analysis).toBeNull();
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBeNull();
   });
 });

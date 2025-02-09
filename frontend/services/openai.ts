@@ -15,7 +15,7 @@ interface OpenAIResponse {
   }>;
 }
 
-interface AIResponse {
+export interface AIResponse {
   evaluation?: {
     insights: string[];
     recommendations: string[];
