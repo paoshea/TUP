@@ -384,12 +384,22 @@ export class AnthropicService {
 export const anthropicService = AnthropicService.getInstance(); 
 
 # To use this with WizardPhil:
+- The application now properly handles AI interactions through a secure server-side API route, eliminating browser-side API credential exposure while maintaining all functionality.
+Moving all Anthropic client interactions to a server-side API route
+Updating the frontend service to use the API route
+Removing direct Anthropic client usage from the browser
+- Maintained all features:
+Clickable "Featuring Now - WizardPhil" button
+Clean production dashboard ready for actual data
+Comprehensive demo system with mock data
+Full WizardPhil AI assistant integration
 
 - First, install the Anthropic SDK:
 bash
 npm install @anthropic-ai/sdk
 
 - Add your Anthropic API key to your environment variables:
+Fixed the Anthropic API integration by:
 
 .env
 NEXT_PUBLIC_ANTHROPIC_API_KEY=your-api-key-here
