@@ -1,6 +1,13 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@/utils/test-utils';
 import { FlockAnalyzer } from '@/components/FlockAnalyzer';
+import { mockUseAI } from '@/utils/test-utils';
 import type { Animal } from '@/types';
+
+// Mock the useAI hook
+jest.mock('@/hooks/useAI', () => ({
+  useAI: () => mockUseAI()
+}));
 
 describe('FlockAnalyzer', () => {
   const mockAnimals: Animal[] = [
@@ -32,49 +39,91 @@ describe('FlockAnalyzer', () => {
     }
   ];
 
-  it('renders animal list', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('renders animal list', async () => {
     render(<FlockAnalyzer animals={mockAnimals} />);
     
-    expect(screen.getByText('Test Animal 1')).toBeInTheDocument();
-    expect(screen.getByText('Test Animal 2')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Test Animal 1')).toBeInTheDocument();
+      expect(screen.getByText('Test Animal 2')).toBeInTheDocument();
+    });
   });
 
   it('allows animal selection', async () => {
+    const mockAnalyzeAnimal = jest.fn().mockResolvedValue({
+      insights: ['Test insight'],
+      recommendations: ['Test recommendation']
+    });
+
+    jest.spyOn(mockUseAI(), 'analyzeAnimal').mockImplementation(mockAnalyzeAnimal);
+
     render(<FlockAnalyzer animals={mockAnimals} />);
     
-    const analyzeButton = screen.getAllByText('Analyze')[0];
+    const analyzeButton = await waitFor(() => screen.getAllByText('Analyze')[0]);
     fireEvent.click(analyzeButton);
 
-    expect(await screen.findByText('Analysis Results for Test Animal 1')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Analysis Results for Test Animal 1')).toBeInTheDocument();
+    });
   });
 
   it('displays analysis results', async () => {
+    const mockAnalysis = {
+      insights: ['Test insight'],
+      recommendations: ['Test recommendation'],
+      confidence: 85
+    };
+
+    jest.spyOn(mockUseAI(), 'analyzeAnimal').mockResolvedValue(mockAnalysis);
+
     render(<FlockAnalyzer animals={mockAnimals} />);
     
-    const analyzeButton = screen.getAllByText('Analyze')[0];
+    const analyzeButton = await waitFor(() => screen.getAllByText('Analyze')[0]);
     fireEvent.click(analyzeButton);
 
-    expect(await screen.findByText('Key Insights')).toBeInTheDocument();
-    expect(await screen.findByText('Recommendations')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Key Insights')).toBeInTheDocument();
+      expect(screen.getByText('Recommendations')).toBeInTheDocument();
+      expect(screen.getByText('Test insight')).toBeInTheDocument();
+      expect(screen.getByText('Test recommendation')).toBeInTheDocument();
+    });
   });
 
-  it('handles loading state', () => {
+  it('handles loading state', async () => {
+    // Mock a delayed analysis to show loading state
+    const mockAnalyzeAnimal = jest.fn().mockImplementation(() => 
+      new Promise(resolve => setTimeout(resolve, 100))
+    );
+
+    jest.spyOn(mockUseAI(), 'analyzeAnimal').mockImplementation(mockAnalyzeAnimal);
+    jest.spyOn(mockUseAI(), 'loading', 'get').mockReturnValue(true);
+
     render(<FlockAnalyzer animals={mockAnimals} />);
     
-    const analyzeButton = screen.getAllByText('Analyze')[0];
+    const analyzeButton = await waitFor(() => screen.getAllByText('Analyze')[0]);
     fireEvent.click(analyzeButton);
 
-    expect(screen.getByText('Analyzing...')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Analyzing...')).toBeInTheDocument();
+    });
   });
 
   it('displays error state', async () => {
+    // Mock the error state
+    const mockError = new Error('An error occurred during analysis');
+    jest.spyOn(mockUseAI(), 'analyzeAnimal').mockRejectedValue(mockError);
+    jest.spyOn(mockUseAI(), 'error', 'get').mockReturnValue(mockError);
+
     render(<FlockAnalyzer animals={mockAnimals} />);
     
-    // Force an error state
-    const analyzeButton = screen.getAllByText('Analyze')[0];
+    const analyzeButton = await waitFor(() => screen.getAllByText('Analyze')[0]);
     fireEvent.click(analyzeButton);
 
-    // Error message should appear (from mock AI service error)
-    expect(await screen.findByText(/error occurred/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/an error occurred during analysis/i)).toBeInTheDocument();
+    });
   });
 });

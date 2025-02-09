@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@/utils/test-utils';
 import { EvaluationForm } from '@/components/EvaluationForm';
 import { FlockAnalyzer } from '@/components/FlockAnalyzer';
 import { mockUsePhotos, mockUseAI } from '@/utils/test-utils';
@@ -43,10 +43,17 @@ describe('Evaluation Flow', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Set up default mock implementations
+    jest.spyOn(mockUseAI(), 'analyzeAnimal').mockResolvedValue({
+      insights: ['Test insight'],
+      recommendations: ['Test recommendation'],
+      confidence: 85
+    });
   });
 
   it('completes full evaluation process', async () => {
-    const mockSave = jest.fn();
+    const mockSave = jest.fn().mockResolvedValue({ id: 'new-eval-123' });
+    
     const { container } = render(
       <>
         <FlockAnalyzer animals={[mockAnimal]} />
@@ -57,35 +64,42 @@ describe('Evaluation Flow', () => {
       </>
     );
 
-    // Select animal
-    const analyzeButton = screen.getByText('Analyze');
+    // Select animal and wait for analysis
+    const analyzeButton = await waitFor(() => screen.getByText('Analyze'));
     fireEvent.click(analyzeButton);
 
-    // Wait for analysis
     await waitFor(() => {
       expect(screen.getByText('Analysis Results for Test Animal')).toBeInTheDocument();
     });
 
     // Update scores
-    const movementInput = screen.getByLabelText(/movement/i);
+    const movementInput = await waitFor(() => screen.getByLabelText(/movement/i));
     fireEvent.change(movementInput, { target: { value: '9' } });
 
     // Add notes
-    const notesInput = screen.getByLabelText(/notes/i);
+    const notesInput = await waitFor(() => screen.getByLabelText(/notes/i));
     fireEvent.change(notesInput, { target: { value: 'Updated notes' } });
 
     // Upload photo
     const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
-    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-    if (fileInput) {
-      Object.defineProperty(fileInput, 'files', {
-        value: [file]
-      });
-      fireEvent.change(fileInput);
-    }
+    await waitFor(() => {
+      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+      expect(fileInput).toBeInTheDocument();
+      if (fileInput) {
+        Object.defineProperty(fileInput, 'files', {
+          value: [file]
+        });
+        fireEvent.change(fileInput);
+      }
+    });
+
+    // Verify photo upload
+    await waitFor(() => {
+      expect(mockUsePhotos().uploadPhoto).toHaveBeenCalledWith(file);
+    });
 
     // Save evaluation
-    const saveButton = screen.getByText(/save/i);
+    const saveButton = await waitFor(() => screen.getByText(/save/i));
     fireEvent.click(saveButton);
 
     await waitFor(() => {
@@ -99,37 +113,48 @@ describe('Evaluation Flow', () => {
   });
 
   it('handles validation and error states', async () => {
+    const mockError = new Error('Save failed');
+    const failedSave = jest.fn().mockRejectedValue(mockError);
+
     render(
       <>
         <FlockAnalyzer animals={[mockAnimal]} />
         <EvaluationForm
-          onSave={() => Promise.reject(new Error('Save failed'))}
+          onSave={failedSave}
           initialData={mockEvaluation}
         />
       </>
     );
 
-    // Select animal
-    const analyzeButton = screen.getByText('Analyze');
+    // Select animal and wait for analysis
+    const analyzeButton = await waitFor(() => screen.getByText('Analyze'));
     fireEvent.click(analyzeButton);
 
+    await waitFor(() => {
+      expect(screen.getByText('Analysis Results for Test Animal')).toBeInTheDocument();
+    });
+
     // Enter invalid score
-    const movementInput = screen.getByLabelText(/movement/i);
+    const movementInput = await waitFor(() => screen.getByLabelText(/movement/i));
     fireEvent.change(movementInput, { target: { value: '11' } });
 
     // Try to save
-    const saveButton = screen.getByText(/save/i);
+    const saveButton = await waitFor(() => screen.getByText(/save/i));
     fireEvent.click(saveButton);
 
     // Check validation error
-    expect(await screen.findByText(/must be between 0 and 10/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/must be between 0 and 10/i)).toBeInTheDocument();
+    });
 
     // Fix score and try again
     fireEvent.change(movementInput, { target: { value: '9' } });
     fireEvent.click(saveButton);
 
     // Check save error
-    expect(await screen.findByText(/failed to save/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/failed to save/i)).toBeInTheDocument();
+    });
   });
 
   it('integrates with photo upload', async () => {
@@ -143,19 +168,26 @@ describe('Evaluation Flow', () => {
       </>
     );
 
-    // Select animal
-    const analyzeButton = screen.getByText('Analyze');
+    // Select animal and wait for analysis
+    const analyzeButton = await waitFor(() => screen.getByText('Analyze'));
     fireEvent.click(analyzeButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Analysis Results for Test Animal')).toBeInTheDocument();
+    });
 
     // Upload photo
     const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
-    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-    if (fileInput) {
-      Object.defineProperty(fileInput, 'files', {
-        value: [file]
-      });
-      fireEvent.change(fileInput);
-    }
+    await waitFor(() => {
+      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+      expect(fileInput).toBeInTheDocument();
+      if (fileInput) {
+        Object.defineProperty(fileInput, 'files', {
+          value: [file]
+        });
+        fireEvent.change(fileInput);
+      }
+    });
 
     await waitFor(() => {
       expect(mockUsePhotos().uploadPhoto).toHaveBeenCalledWith(file);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@/utils/test-utils';
 import { EvaluationForm } from '@/components/EvaluationForm';
 import { mockUsePhotos } from '@/utils/test-utils';
 
@@ -9,7 +9,7 @@ jest.mock('@/hooks/usePhotos', () => ({
 }));
 
 describe('EvaluationForm', () => {
-  const mockOnSave = jest.fn();
+  const mockOnSave = jest.fn().mockResolvedValue({ id: 'test-eval-123' });
   const mockInitialData = {
     id: 'test-eval-123',
     scores: {
@@ -26,7 +26,7 @@ describe('EvaluationForm', () => {
     jest.clearAllMocks();
   });
 
-  it('renders all score categories', () => {
+  it('renders all score categories', async () => {
     render(
       <EvaluationForm
         onSave={mockOnSave}
@@ -34,10 +34,12 @@ describe('EvaluationForm', () => {
       />
     );
 
-    expect(screen.getByText('Movement')).toBeInTheDocument();
-    expect(screen.getByText('Conformation')).toBeInTheDocument();
-    expect(screen.getByText('Muscle Development')).toBeInTheDocument();
-    expect(screen.getByText('Breed Characteristics')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Movement')).toBeInTheDocument();
+      expect(screen.getByText('Conformation')).toBeInTheDocument();
+      expect(screen.getByText('Muscle Development')).toBeInTheDocument();
+      expect(screen.getByText('Breed Characteristics')).toBeInTheDocument();
+    });
   });
 
   it('handles score changes', async () => {
@@ -48,7 +50,7 @@ describe('EvaluationForm', () => {
       />
     );
 
-    const movementInput = screen.getByLabelText(/movement/i);
+    const movementInput = await waitFor(() => screen.getByLabelText(/movement/i));
     fireEvent.change(movementInput, { target: { value: '9' } });
 
     const saveButton = screen.getByText(/save/i);
@@ -71,7 +73,7 @@ describe('EvaluationForm', () => {
       />
     );
 
-    const notesInput = screen.getByLabelText(/notes/i);
+    const notesInput = await waitFor(() => screen.getByLabelText(/notes/i));
     fireEvent.change(notesInput, { target: { value: 'New test notes' } });
 
     const saveButton = screen.getByText(/save/i);
@@ -92,14 +94,16 @@ describe('EvaluationForm', () => {
       />
     );
 
-    const movementInput = screen.getByLabelText(/movement/i);
+    const movementInput = await waitFor(() => screen.getByLabelText(/movement/i));
     fireEvent.change(movementInput, { target: { value: '11' } });
 
     const saveButton = screen.getByText(/save/i);
     fireEvent.click(saveButton);
 
-    expect(await screen.findByText(/must be between 0 and 10/i)).toBeInTheDocument();
-    expect(mockOnSave).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByText(/must be between 0 and 10/i)).toBeInTheDocument();
+      expect(mockOnSave).not.toHaveBeenCalled();
+    });
   });
 
   it('shows photo upload interface', async () => {
@@ -110,11 +114,13 @@ describe('EvaluationForm', () => {
       />
     );
 
-    const uploadButton = screen.getByText(/upload photo/i);
-    expect(uploadButton).toBeInTheDocument();
+    await waitFor(() => {
+      const uploadButton = screen.getByText(/upload photo/i);
+      expect(uploadButton).toBeInTheDocument();
 
-    const fileInput = container.querySelector('input[type="file"]');
-    expect(fileInput).toBeInTheDocument();
+      const fileInput = container.querySelector('input[type="file"]');
+      expect(fileInput).toBeInTheDocument();
+    });
   });
 
   it('handles photo upload', async () => {
@@ -126,14 +132,18 @@ describe('EvaluationForm', () => {
     );
 
     const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
-    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-
-    if (fileInput) {
-      Object.defineProperty(fileInput, 'files', {
-        value: [file]
-      });
-      fireEvent.change(fileInput);
-    }
+    
+    await waitFor(() => {
+      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+      expect(fileInput).toBeInTheDocument();
+      
+      if (fileInput) {
+        Object.defineProperty(fileInput, 'files', {
+          value: [file]
+        });
+        fireEvent.change(fileInput);
+      }
+    });
 
     await waitFor(() => {
       expect(mockUsePhotos().uploadPhoto).toHaveBeenCalledWith(file);
@@ -141,31 +151,41 @@ describe('EvaluationForm', () => {
   });
 
   it('displays loading state during save', async () => {
+    const slowSave = jest.fn().mockImplementation(() => 
+      new Promise(resolve => setTimeout(() => resolve({ id: 'test-eval-123' }), 100))
+    );
+
     render(
       <EvaluationForm
-        onSave={async () => new Promise(resolve => setTimeout(resolve, 100))}
+        onSave={slowSave}
         initialData={mockInitialData}
       />
     );
 
-    const saveButton = screen.getByText(/save/i);
+    const saveButton = await waitFor(() => screen.getByText(/save/i));
     fireEvent.click(saveButton);
 
-    expect(await screen.findByText(/saving/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/saving/i)).toBeInTheDocument();
+    });
   });
 
   it('handles save errors', async () => {
     const mockError = new Error('Save failed');
+    const failedSave = jest.fn().mockRejectedValue(mockError);
+
     render(
       <EvaluationForm
-        onSave={() => Promise.reject(mockError)}
+        onSave={failedSave}
         initialData={mockInitialData}
       />
     );
 
-    const saveButton = screen.getByText(/save/i);
+    const saveButton = await waitFor(() => screen.getByText(/save/i));
     fireEvent.click(saveButton);
 
-    expect(await screen.findByText(/failed to save/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/failed to save/i)).toBeInTheDocument();
+    });
   });
 });
