@@ -58,8 +58,8 @@ export function render(ui: React.ReactElement, options: CustomRenderOptions = {}
   }
 
   const result = rtlRender(ui, {
-    wrapper: CustomWrapper,
     ...restOptions,
+    wrapper: CustomWrapper,
   });
 
   return {

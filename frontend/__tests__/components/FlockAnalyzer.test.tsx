@@ -72,49 +72,63 @@ describe('FlockAnalyzer', () => {
   it('handles analysis process', async () => {
     render(<FlockAnalyzer animals={mockAnimals} />);
     
+    // Click analyze button for first animal
     const analyzeButton = screen.getAllByText('Analyze')[0];
     fireEvent.click(analyzeButton);
 
-    // Set mock analysis data
-    mockAIHook.analysis = {
-      insights: ['Test insight'],
-      confidence: 0.85
-    };
-
+    // Wait for loading state
     await waitFor(() => {
-      expect(screen.getByText('Key Insights')).toBeInTheDocument();
-      expect(screen.getByText('Test insight')).toBeInTheDocument();
+      expect(screen.getByText('Analyzing...')).toBeInTheDocument();
     });
 
-    // Verify recommendations were fetched
+    // Wait for analysis results
+    await waitFor(() => {
+      expect(screen.getByText('Analysis Results for Test Animal 1')).toBeInTheDocument();
+      expect(screen.getByText('Test insight')).toBeInTheDocument();
+      expect(screen.getByText('Test recommendation')).toBeInTheDocument();
+      expect(screen.getByText('Test improvement')).toBeInTheDocument();
+      expect(screen.getByText('Test prediction')).toBeInTheDocument();
+    });
+
+    // Verify API calls
+    expect(mockAIHook.analyzeAnimal).toHaveBeenCalledWith(mockAnimals[0]);
     expect(mockAIHook.getRecommendations).toHaveBeenCalledWith('1');
     expect(mockAIHook.compareWithHistorical).toHaveBeenCalledWith('1');
   });
 
   it('handles loading state', async () => {
+    // Set loading state before render
     mockAIHook.loading = true;
 
     render(<FlockAnalyzer animals={mockAnimals} />);
     
+    // Click analyze button for first animal
     const analyzeButton = screen.getAllByText('Analyze')[0];
     fireEvent.click(analyzeButton);
 
-    expect(screen.getByText('Analyzing...')).toBeInTheDocument();
-    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+    // Wait for loading state
+    await waitFor(() => {
+      expect(screen.getByText('Analyzing...')).toBeInTheDocument();
+      expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+    });
   });
 
   it('displays error state', async () => {
     const mockError = new Error('An error occurred during analysis');
-    mockAIHook.error = mockError;
     mockAIHook.analyzeAnimal.mockRejectedValueOnce(mockError);
 
     render(<FlockAnalyzer animals={mockAnimals} />);
     
+    // Click analyze button for first animal
     const analyzeButton = screen.getAllByText('Analyze')[0];
     fireEvent.click(analyzeButton);
 
+    // Wait for error message
     await waitFor(() => {
-      expect(screen.getByText(/an error occurred during analysis/i)).toBeInTheDocument();
+      expect(screen.getByText('An error occurred during analysis')).toBeInTheDocument();
     });
+
+    // Verify error state
+    expect(mockAIHook.error).toBe(mockError);
   });
 });

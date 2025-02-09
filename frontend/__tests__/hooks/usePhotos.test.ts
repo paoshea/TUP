@@ -1,18 +1,20 @@
 import { renderHook, act } from '@testing-library/react';
 import { usePhotos } from '@/hooks/usePhotos';
 
-// Create mock storage service
-const mockStorageService = {
-  uploadPhoto: jest.fn().mockResolvedValue({ path: 'test-url' }),
-  getPhotoUrl: jest.fn().mockReturnValue('test-url'),
-  deletePhoto: jest.fn().mockResolvedValue(undefined),
-  getPhotoData: jest.fn().mockResolvedValue({ url: 'test-url', metadata: {} })
-};
+// Create mock functions
+const mockUploadPhoto = jest.fn().mockResolvedValue({ path: 'test-url' });
+const mockGetPhotoUrl = jest.fn().mockReturnValue('test-url');
+const mockDeletePhoto = jest.fn().mockResolvedValue(undefined);
+const mockGetPhotoData = jest.fn().mockResolvedValue({ url: 'test-url', metadata: {} });
 
-// Mock the storage service before importing the hook
+// Mock the storage service
 jest.mock('@/services/storage', () => ({
-  __esModule: true,
-  default: mockStorageService
+  storage: {
+    uploadPhoto: mockUploadPhoto,
+    getPhotoUrl: mockGetPhotoUrl,
+    deletePhoto: mockDeletePhoto,
+    getPhotoData: mockGetPhotoData,
+  }
 }));
 
 describe('usePhotos', () => {
@@ -41,12 +43,12 @@ describe('usePhotos', () => {
     expect(result.current.uploading).toBe(false);
     expect(result.current.error).toBeNull();
     expect(uploadedUrl).toBe('test-url');
-    expect(mockStorageService.uploadPhoto).toHaveBeenCalledWith(mockFile, expect.any(String));
+    expect(mockUploadPhoto).toHaveBeenCalledWith(mockFile, expect.stringContaining(mockFile.name));
   });
 
   it('handles upload error', async () => {
     const error = new Error('Upload failed');
-    mockStorageService.uploadPhoto.mockRejectedValueOnce(error);
+    mockUploadPhoto.mockRejectedValueOnce(error);
 
     const { result } = renderHook(() => usePhotos(mockAnimalId));
 
@@ -73,12 +75,12 @@ describe('usePhotos', () => {
     });
 
     expect(result.current.error).toBeNull();
-    expect(mockStorageService.deletePhoto).toHaveBeenCalledWith(photoPath);
+    expect(mockDeletePhoto).toHaveBeenCalledWith(photoPath);
   });
 
   it('handles deletion error', async () => {
     const error = new Error('Delete failed');
-    mockStorageService.deletePhoto.mockRejectedValueOnce(error);
+    mockDeletePhoto.mockRejectedValueOnce(error);
 
     const { result } = renderHook(() => usePhotos(mockAnimalId));
     const photoPath = 'test-path/photo.jpg';

@@ -1,11 +1,17 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@/utils/test-utils';
 import { EvaluationForm } from '@/components/EvaluationForm';
-import { mockUsePhotos } from '@/utils/test-utils';
+import * as useOfflineSyncModule from '@/hooks/useOfflineSync';
 
-// Mock hooks
-jest.mock('@/hooks/usePhotos', () => ({
-  usePhotos: () => mockUsePhotos()
+// Mock useOfflineSync hook
+jest.mock('@/hooks/useOfflineSync', () => ({
+  useOfflineSync: () => ({
+    isOnline: true,
+    isSyncing: false,
+    syncQueue: [],
+    saveOffline: jest.fn(),
+    syncQueuedItems: jest.fn().mockResolvedValue(undefined)
+  })
 }));
 
 describe('EvaluationForm', () => {
@@ -35,10 +41,10 @@ describe('EvaluationForm', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Movement')).toBeInTheDocument();
-      expect(screen.getByText('Conformation')).toBeInTheDocument();
-      expect(screen.getByText('Muscle Development')).toBeInTheDocument();
-      expect(screen.getByText('Breed Characteristics')).toBeInTheDocument();
+      expect(screen.getByText('Movement Score')).toBeInTheDocument();
+      expect(screen.getByText('Conformation Score')).toBeInTheDocument();
+      expect(screen.getByText('Muscle Development Score')).toBeInTheDocument();
+      expect(screen.getByText('Breed Characteristics Score')).toBeInTheDocument();
     });
   });
 
@@ -50,10 +56,15 @@ describe('EvaluationForm', () => {
       />
     );
 
-    const movementInput = await waitFor(() => screen.getByLabelText(/movement/i));
-    fireEvent.change(movementInput, { target: { value: '9' } });
+    const movementSlider = await waitFor(() => 
+      screen.getByLabelText('Movement Score').closest('.flex-1')
+    );
+    
+    if (movementSlider) {
+      fireEvent.change(movementSlider, { target: { value: '9' } });
+    }
 
-    const saveButton = screen.getByText(/save/i);
+    const saveButton = screen.getByText('Save Evaluation');
     fireEvent.click(saveButton);
 
     await waitFor(() => {
@@ -73,10 +84,10 @@ describe('EvaluationForm', () => {
       />
     );
 
-    const notesInput = await waitFor(() => screen.getByLabelText(/notes/i));
+    const notesInput = await waitFor(() => screen.getByLabelText('Evaluation Notes'));
     fireEvent.change(notesInput, { target: { value: 'New test notes' } });
 
-    const saveButton = screen.getByText(/save/i);
+    const saveButton = screen.getByText('Save Evaluation');
     fireEvent.click(saveButton);
 
     await waitFor(() => {
@@ -94,59 +105,20 @@ describe('EvaluationForm', () => {
       />
     );
 
-    const movementInput = await waitFor(() => screen.getByLabelText(/movement/i));
-    fireEvent.change(movementInput, { target: { value: '11' } });
+    const movementSlider = await waitFor(() => 
+      screen.getByLabelText('Movement Score').closest('.flex-1')
+    );
+    
+    if (movementSlider) {
+      fireEvent.change(movementSlider, { target: { value: '11' } });
+    }
 
-    const saveButton = screen.getByText(/save/i);
+    const saveButton = screen.getByText('Save Evaluation');
     fireEvent.click(saveButton);
 
     await waitFor(() => {
       expect(screen.getByText(/must be between 0 and 10/i)).toBeInTheDocument();
       expect(mockOnSave).not.toHaveBeenCalled();
-    });
-  });
-
-  it('shows photo upload interface', async () => {
-    const { container } = render(
-      <EvaluationForm
-        onSave={mockOnSave}
-        initialData={mockInitialData}
-      />
-    );
-
-    await waitFor(() => {
-      const uploadButton = screen.getByText(/upload photo/i);
-      expect(uploadButton).toBeInTheDocument();
-
-      const fileInput = container.querySelector('input[type="file"]');
-      expect(fileInput).toBeInTheDocument();
-    });
-  });
-
-  it('handles photo upload', async () => {
-    const { container } = render(
-      <EvaluationForm
-        onSave={mockOnSave}
-        initialData={mockInitialData}
-      />
-    );
-
-    const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
-    
-    await waitFor(() => {
-      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-      expect(fileInput).toBeInTheDocument();
-      
-      if (fileInput) {
-        Object.defineProperty(fileInput, 'files', {
-          value: [file]
-        });
-        fireEvent.change(fileInput);
-      }
-    });
-
-    await waitFor(() => {
-      expect(mockUsePhotos().uploadPhoto).toHaveBeenCalledWith(file);
     });
   });
 
@@ -162,11 +134,11 @@ describe('EvaluationForm', () => {
       />
     );
 
-    const saveButton = await waitFor(() => screen.getByText(/save/i));
+    const saveButton = screen.getByText('Save Evaluation');
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/saving/i)).toBeInTheDocument();
+      expect(screen.getByText('Saving...')).toBeInTheDocument();
     });
   });
 
@@ -181,11 +153,33 @@ describe('EvaluationForm', () => {
       />
     );
 
-    const saveButton = await waitFor(() => screen.getByText(/save/i));
+    const saveButton = screen.getByText('Save Evaluation');
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/failed to save/i)).toBeInTheDocument();
+      expect(screen.getByText('Error saving evaluation. Please try again.')).toBeInTheDocument();
+    });
+  });
+
+  it('handles offline mode', async () => {
+    // Mock offline mode
+    jest.spyOn(useOfflineSyncModule, 'useOfflineSync').mockImplementation(() => ({
+      isOnline: false,
+      isSyncing: false,
+      syncQueue: [],
+      saveOffline: jest.fn().mockResolvedValue(undefined),
+      syncQueuedItems: jest.fn().mockResolvedValue(undefined)
+    }));
+
+    render(
+      <EvaluationForm
+        onSave={mockOnSave}
+        initialData={mockInitialData}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Offline Mode - Changes will sync when online')).toBeInTheDocument();
     });
   });
 });

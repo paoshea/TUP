@@ -19,10 +19,14 @@ export function FlockAnalyzer({ animals }: FlockAnalyzerProps) {
     trends: Record<string, number>;
     predictions: string[];
   } | null>(null);
+  const [analysisError, setAnalysisError] = useState<Error | null>(null);
 
   const handleAnalyze = async (animal: Animal) => {
     try {
+      setAnalysisError(null);
       setSelectedAnimal(animal);
+      
+      // Analyze animal
       await analyzeAnimal(animal);
       
       // Get additional insights
@@ -31,21 +35,25 @@ export function FlockAnalyzer({ animals }: FlockAnalyzerProps) {
       
       const comp = await compareWithHistorical(animal.id);
       setComparison(comp);
-    } catch (error) {
-      // Error will be handled by the useAI hook
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('An error occurred during analysis');
+      setAnalysisError(error);
       console.error('Analysis failed:', error);
     }
   };
+
+  // Show either the hook error or the local error
+  const displayError = error || analysisError;
 
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">Flock Analysis</h2>
       
       {/* Error Display */}
-      {error && (
+      {displayError && (
         <Alert variant="destructive">
           <AlertDescription>
-            {error instanceof Error ? error.message : 'An error occurred during analysis'}
+            {displayError.message}
           </AlertDescription>
         </Alert>
       )}
@@ -75,7 +83,7 @@ export function FlockAnalyzer({ animals }: FlockAnalyzerProps) {
       </div>
 
       {/* Analysis Results */}
-      {analysis && selectedAnimal && (
+      {analysis && selectedAnimal && !displayError && (
         <Card className="p-6 mt-8">
           <h3 className="text-xl font-semibold mb-4">
             Analysis Results for {selectedAnimal.name}

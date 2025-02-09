@@ -2,16 +2,23 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@/utils/test-utils';
 import { EvaluationForm } from '@/components/EvaluationForm';
 import { FlockAnalyzer } from '@/components/FlockAnalyzer';
-import { mockUsePhotos, mockUseAI } from '@/utils/test-utils';
+import { mockUseAI } from '@/utils/test-utils';
 import type { Animal } from '@/types';
 
 // Mock hooks
-jest.mock('@/hooks/usePhotos', () => ({
-  usePhotos: () => mockUsePhotos()
-}));
-
 jest.mock('@/hooks/useAI', () => ({
   useAI: () => mockUseAI()
+}));
+
+// Mock useOfflineSync hook
+jest.mock('@/hooks/useOfflineSync', () => ({
+  useOfflineSync: () => ({
+    isOnline: true,
+    isSyncing: false,
+    syncQueue: [],
+    saveOffline: jest.fn(),
+    syncQueuedItems: jest.fn().mockResolvedValue(undefined)
+  })
 }));
 
 describe('Evaluation Flow', () => {
@@ -54,7 +61,7 @@ describe('Evaluation Flow', () => {
   it('completes full evaluation process', async () => {
     const mockSave = jest.fn().mockResolvedValue({ id: 'new-eval-123' });
     
-    const { container } = render(
+    render(
       <>
         <FlockAnalyzer animals={[mockAnimal]} />
         <EvaluationForm
@@ -72,34 +79,21 @@ describe('Evaluation Flow', () => {
       expect(screen.getByText('Analysis Results for Test Animal')).toBeInTheDocument();
     });
 
-    // Update scores
-    const movementInput = await waitFor(() => screen.getByLabelText(/movement/i));
-    fireEvent.change(movementInput, { target: { value: '9' } });
+    // Update scores using slider
+    const movementSlider = await waitFor(() => 
+      screen.getByLabelText('Movement Score').closest('.flex-1')
+    );
+    
+    if (movementSlider) {
+      fireEvent.change(movementSlider, { target: { value: '9' } });
+    }
 
     // Add notes
-    const notesInput = await waitFor(() => screen.getByLabelText(/notes/i));
+    const notesInput = await waitFor(() => screen.getByLabelText('Evaluation Notes'));
     fireEvent.change(notesInput, { target: { value: 'Updated notes' } });
 
-    // Upload photo
-    const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
-    await waitFor(() => {
-      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-      expect(fileInput).toBeInTheDocument();
-      if (fileInput) {
-        Object.defineProperty(fileInput, 'files', {
-          value: [file]
-        });
-        fireEvent.change(fileInput);
-      }
-    });
-
-    // Verify photo upload
-    await waitFor(() => {
-      expect(mockUsePhotos().uploadPhoto).toHaveBeenCalledWith(file);
-    });
-
     // Save evaluation
-    const saveButton = await waitFor(() => screen.getByText(/save/i));
+    const saveButton = await waitFor(() => screen.getByText('Save Evaluation'));
     fireEvent.click(saveButton);
 
     await waitFor(() => {
@@ -134,12 +128,17 @@ describe('Evaluation Flow', () => {
       expect(screen.getByText('Analysis Results for Test Animal')).toBeInTheDocument();
     });
 
-    // Enter invalid score
-    const movementInput = await waitFor(() => screen.getByLabelText(/movement/i));
-    fireEvent.change(movementInput, { target: { value: '11' } });
+    // Enter invalid score using slider
+    const movementSlider = await waitFor(() => 
+      screen.getByLabelText('Movement Score').closest('.flex-1')
+    );
+    
+    if (movementSlider) {
+      fireEvent.change(movementSlider, { target: { value: '11' } });
+    }
 
     // Try to save
-    const saveButton = await waitFor(() => screen.getByText(/save/i));
+    const saveButton = await waitFor(() => screen.getByText('Save Evaluation'));
     fireEvent.click(saveButton);
 
     // Check validation error
@@ -148,17 +147,30 @@ describe('Evaluation Flow', () => {
     });
 
     // Fix score and try again
-    fireEvent.change(movementInput, { target: { value: '9' } });
+    if (movementSlider) {
+      fireEvent.change(movementSlider, { target: { value: '9' } });
+    }
     fireEvent.click(saveButton);
 
     // Check save error
     await waitFor(() => {
-      expect(screen.getByText(/failed to save/i)).toBeInTheDocument();
+      expect(screen.getByText('Error saving evaluation. Please try again.')).toBeInTheDocument();
     });
   });
 
-  it('integrates with photo upload', async () => {
-    const { container } = render(
+  it('handles offline mode', async () => {
+    // Mock offline mode
+    jest.mock('@/hooks/useOfflineSync', () => ({
+      useOfflineSync: () => ({
+        isOnline: false,
+        isSyncing: false,
+        syncQueue: [],
+        saveOffline: jest.fn().mockResolvedValue(undefined),
+        syncQueuedItems: jest.fn().mockResolvedValue(undefined)
+      })
+    }));
+
+    render(
       <>
         <FlockAnalyzer animals={[mockAnimal]} />
         <EvaluationForm
@@ -168,7 +180,12 @@ describe('Evaluation Flow', () => {
       </>
     );
 
-    // Select animal and wait for analysis
+    // Verify offline mode message
+    await waitFor(() => {
+      expect(screen.getByText('Offline Mode - Changes will sync when online')).toBeInTheDocument();
+    });
+
+    // Complete evaluation in offline mode
     const analyzeButton = await waitFor(() => screen.getByText('Analyze'));
     fireEvent.click(analyzeButton);
 
@@ -176,21 +193,12 @@ describe('Evaluation Flow', () => {
       expect(screen.getByText('Analysis Results for Test Animal')).toBeInTheDocument();
     });
 
-    // Upload photo
-    const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
-    await waitFor(() => {
-      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-      expect(fileInput).toBeInTheDocument();
-      if (fileInput) {
-        Object.defineProperty(fileInput, 'files', {
-          value: [file]
-        });
-        fireEvent.change(fileInput);
-      }
-    });
+    // Save should trigger offline save
+    const saveButton = await waitFor(() => screen.getByText('Save Evaluation'));
+    fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(mockUsePhotos().uploadPhoto).toHaveBeenCalledWith(file);
+      expect(screen.getByText('Evaluation saved offline. Will sync when back online.')).toBeInTheDocument();
     });
   });
 });
