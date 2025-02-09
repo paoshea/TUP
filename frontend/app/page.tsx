@@ -1,13 +1,12 @@
-"use client";
-
 import { Header } from '@/components/Header';
 import { Dashboard } from '@/components/Dashboard';
+import { ClientWrapper } from '@/components/ClientWrapper';
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-background">
+    <ClientWrapper>
       <Header />
-      <main className="container mx-auto p-6">
+      <div className="container mx-auto p-6">
         <h1 className="text-3xl font-bold tracking-tight mb-6">
           TUP Livestock Management System
         </h1>
@@ -18,7 +17,7 @@ export default function HomePage() {
         </p>
 
         <Dashboard />
-      </main>
-    </div>
+      </div>
+    </ClientWrapper>
   );
 }

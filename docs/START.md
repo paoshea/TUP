@@ -2,6 +2,10 @@
 
 ## Quick Start
 ```bash
+-  To build and restarted the application, 
+npm run build --workspace=frontend && npm run dev --workspace=frontend
+- To restart the development server 
+npm run dev --workspace=frontend
 # 1. Navigate to frontend and copy environment file
 cd frontend
 cp .env.local.example .env.local

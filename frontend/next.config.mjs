@@ -1,25 +1,36 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  env: {
-    MONGODB_URI: process.env.MONGODB_URI,
-    JWT_SECRET: process.env.JWT_SECRET,
+  experimental: {
+    appDir: true,
   },
-  images: {
-    domains: ['localhost'],
-    remotePatterns: [
+  // Use standalone output
+  output: 'standalone',
+  // Disable static generation
+  staticPageGenerationTimeout: 0,
+  // Force dynamic rendering for all routes
+  async headers() {
+    return [
       {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '3000',
-        pathname: '/api/photos/**',
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, must-revalidate',
+          },
+        ],
       },
-    ],
+    ];
   },
-  webpack: (config) => {
-    config.experiments = { ...config.experiments, topLevelAwait: true };
-    return config;
+  // Error handling configuration
+  onDemandEntries: {
+    maxInactiveAge: 60 * 60 * 1000,
+    pagesBufferLength: 2,
   },
-};
+  // Development configuration
+  devIndicators: {
+    buildActivityPosition: 'bottom-right',
+  },
+}
 
 export default nextConfig;
