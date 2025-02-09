@@ -49,3 +49,22 @@ mockIntersectionObserver.mockReturnValue({
   disconnect: () => null,
 });
 window.IntersectionObserver = mockIntersectionObserver;
+
+// Mock fetch
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({ url: 'test-url' }),
+    blob: () => Promise.resolve(new Blob()),
+  })
+) as jest.Mock;
+
+beforeEach(() => {
+  // Clear all mocks before each test
+  jest.clearAllMocks();
+});
+
+afterEach(() => {
+  // Clean up after each test
+  jest.restoreAllMocks();
+});

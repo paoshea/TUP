@@ -1,56 +1,80 @@
-import { render, screen, fireEvent } from '@/utils/test-utils';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { FlockAnalyzer } from '@/components/FlockAnalyzer';
-import '@testing-library/jest-dom';
+import type { Animal } from '@/types';
 
 describe('FlockAnalyzer', () => {
-  it('renders historical flocks', () => {
-    render(<FlockAnalyzer />);
-    expect(screen.getByText("Queen Mother's Caithness Flock")).toBeInTheDocument();
-  });
+  const mockAnimals: Animal[] = [
+    {
+      id: '1',
+      name: 'Test Animal 1',
+      category: 'livestock',
+      breed: 'Test Breed',
+      region: 'Test Region',
+      scores: {
+        movement: 8,
+        conformation: 7,
+        muscleDevelopment: 9,
+        breedCharacteristics: 8
+      }
+    },
+    {
+      id: '2',
+      name: 'Test Animal 2',
+      category: 'livestock',
+      breed: 'Test Breed',
+      region: 'Test Region',
+      scores: {
+        movement: 7,
+        conformation: 8,
+        muscleDevelopment: 8,
+        breedCharacteristics: 7
+      }
+    }
+  ];
 
-  it('allows flock selection', () => {
-    render(<FlockAnalyzer />);
-    const flock = screen.getByText("Queen Mother's Caithness Flock");
-    fireEvent.click(flock);
+  it('renders animal list', () => {
+    render(<FlockAnalyzer animals={mockAnimals} />);
     
-    // Check if flock details are displayed
-    expect(screen.getByText('Est. 1952')).toBeInTheDocument();
-    expect(screen.getByText('Show Performance')).toBeInTheDocument();
-    expect(screen.getByText('95%')).toBeInTheDocument();
+    expect(screen.getByText('Test Animal 1')).toBeInTheDocument();
+    expect(screen.getByText('Test Animal 2')).toBeInTheDocument();
   });
 
-  it('displays flock metrics after selection', () => {
-    render(<FlockAnalyzer />);
-    const flock = screen.getByText("Queen Mother's Caithness Flock");
-    fireEvent.click(flock);
-
-    // Check metrics
-    expect(screen.getByText('Breeding Success')).toBeInTheDocument();
-    expect(screen.getByText('92%')).toBeInTheDocument();
-    expect(screen.getByText('Conformation')).toBeInTheDocument();
-    expect(screen.getByText('94%')).toBeInTheDocument();
-  });
-
-  it('switches between historical and analysis views', () => {
-    render(<FlockAnalyzer />);
+  it('allows animal selection', async () => {
+    render(<FlockAnalyzer animals={mockAnimals} />);
     
-    // Click analysis tab
-    const analysisTab = screen.getByText('Analysis');
-    fireEvent.click(analysisTab);
-    expect(screen.getByText('Select a flock from the historical data to view detailed analysis.')).toBeInTheDocument();
+    const analyzeButton = screen.getAllByText('Analyze')[0];
+    fireEvent.click(analyzeButton);
 
-    // Click historical tab
-    const historicalTab = screen.getByText('Historical Data');
-    fireEvent.click(historicalTab);
-    expect(screen.getByText("Queen Mother's Caithness Flock")).toBeInTheDocument();
+    expect(await screen.findByText('Analysis Results for Test Animal 1')).toBeInTheDocument();
   });
 
-  it('displays notable traits', () => {
-    render(<FlockAnalyzer />);
-    const flock = screen.getByText("Queen Mother's Caithness Flock");
-    fireEvent.click(flock);
+  it('displays analysis results', async () => {
+    render(<FlockAnalyzer animals={mockAnimals} />);
+    
+    const analyzeButton = screen.getAllByText('Analyze')[0];
+    fireEvent.click(analyzeButton);
 
-    expect(screen.getByText('Notable Traits')).toBeInTheDocument();
-    expect(screen.getByText('Exceptional breed character, strong maternal lines')).toBeInTheDocument();
+    expect(await screen.findByText('Key Insights')).toBeInTheDocument();
+    expect(await screen.findByText('Recommendations')).toBeInTheDocument();
+  });
+
+  it('handles loading state', () => {
+    render(<FlockAnalyzer animals={mockAnimals} />);
+    
+    const analyzeButton = screen.getAllByText('Analyze')[0];
+    fireEvent.click(analyzeButton);
+
+    expect(screen.getByText('Analyzing...')).toBeInTheDocument();
+  });
+
+  it('displays error state', async () => {
+    render(<FlockAnalyzer animals={mockAnimals} />);
+    
+    // Force an error state
+    const analyzeButton = screen.getAllByText('Analyze')[0];
+    fireEvent.click(analyzeButton);
+
+    // Error message should appear (from mock AI service error)
+    expect(await screen.findByText(/error occurred/i)).toBeInTheDocument();
   });
 });

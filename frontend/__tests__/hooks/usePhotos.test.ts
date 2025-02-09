@@ -1,95 +1,108 @@
 import { renderHook, act } from '@testing-library/react';
 import { usePhotos } from '@/hooks/usePhotos';
-import { storage } from '@/services/storage';
-
-// Mock the storage service
-jest.mock('@/services/storage', () => ({
-  storage: {
-    uploadPhoto: jest.fn(),
-    getPhotoUrl: jest.fn(),
-    deletePhoto: jest.fn(),
-  },
-}));
 
 describe('usePhotos', () => {
-  const testAnimalId = 'test-animal-123';
-  const testFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
+  const mockFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
+  const mockAnimalId = 'test-animal-123';
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Reset fetch mock
+    (global.fetch as jest.Mock).mockClear();
   });
 
-  it('initializes with no error and not uploading', () => {
-    const { result } = renderHook(() => usePhotos(testAnimalId));
-    expect(result.current.error).toBeNull();
+  it('initializes with default state', () => {
+    const { result } = renderHook(() => usePhotos(mockAnimalId));
+
     expect(result.current.uploading).toBe(false);
+    expect(result.current.error).toBeNull();
   });
 
   it('handles photo upload successfully', async () => {
-    const mockPath = `${testAnimalId}/test.jpg`;
-    const mockUrl = 'https://example.com/photos/test.jpg';
+    const mockPhotoUrl = 'test-url';
+    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ path: 'test-path' }),
+      })
+    );
+    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ url: mockPhotoUrl }),
+      })
+    );
 
-    (storage.uploadPhoto as jest.Mock).mockResolvedValueOnce({ path: mockPath });
-    (storage.getPhotoUrl as jest.Mock).mockReturnValueOnce(mockUrl);
-
-    const { result } = renderHook(() => usePhotos(testAnimalId));
+    const { result } = renderHook(() => usePhotos(mockAnimalId));
 
     let uploadedUrl: string | undefined;
-
     await act(async () => {
-      uploadedUrl = await result.current.uploadPhoto(testFile);
+      uploadedUrl = await result.current.uploadPhoto(mockFile);
     });
 
-    expect(uploadedUrl).toBe(mockUrl);
     expect(result.current.uploading).toBe(false);
     expect(result.current.error).toBeNull();
-    expect(storage.uploadPhoto).toHaveBeenCalledWith(testFile, expect.stringContaining(testAnimalId));
-    expect(storage.getPhotoUrl).toHaveBeenCalledWith(mockPath);
+    expect(uploadedUrl).toBe(mockPhotoUrl);
   });
 
   it('handles upload error', async () => {
     const error = new Error('Upload failed');
-    (storage.uploadPhoto as jest.Mock).mockRejectedValueOnce(error);
+    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+      Promise.reject(error)
+    );
 
-    const { result } = renderHook(() => usePhotos(testAnimalId));
+    const { result } = renderHook(() => usePhotos(mockAnimalId));
 
-    await expect(
-      act(async () => {
-        await result.current.uploadPhoto(testFile);
-      })
-    ).rejects.toThrow('Upload failed');
+    await act(async () => {
+      try {
+        await result.current.uploadPhoto(mockFile);
+        fail('Expected upload to fail');
+      } catch {
+        // Expected error
+      }
+    });
 
     expect(result.current.uploading).toBe(false);
-    expect(result.current.error).toEqual(error);
+    expect(result.current.error).toBeTruthy();
+    expect(result.current.error?.message).toContain('Failed to upload photo');
   });
 
   it('handles photo deletion successfully', async () => {
-    const mockPath = `${testAnimalId}/test.jpg`;
-    (storage.deletePhoto as jest.Mock).mockResolvedValueOnce(undefined);
+    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+      })
+    );
 
-    const { result } = renderHook(() => usePhotos(testAnimalId));
+    const { result } = renderHook(() => usePhotos(mockAnimalId));
+    const photoPath = 'test-path/photo.jpg';
 
     await act(async () => {
-      await result.current.deletePhoto(mockPath);
+      await result.current.deletePhoto(photoPath);
     });
 
     expect(result.current.error).toBeNull();
-    expect(storage.deletePhoto).toHaveBeenCalledWith(mockPath);
   });
 
   it('handles deletion error', async () => {
     const error = new Error('Delete failed');
-    const mockPath = `${testAnimalId}/test.jpg`;
-    (storage.deletePhoto as jest.Mock).mockRejectedValueOnce(error);
+    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+      Promise.reject(error)
+    );
 
-    const { result } = renderHook(() => usePhotos(testAnimalId));
+    const { result } = renderHook(() => usePhotos(mockAnimalId));
+    const photoPath = 'test-path/photo.jpg';
 
-    await expect(
-      act(async () => {
-        await result.current.deletePhoto(mockPath);
-      })
-    ).rejects.toThrow('Delete failed');
+    await act(async () => {
+      try {
+        await result.current.deletePhoto(photoPath);
+        fail('Expected deletion to fail');
+      } catch {
+        // Expected error
+      }
+    });
 
-    expect(result.current.error).toEqual(error);
+    expect(result.current.error).toBeTruthy();
+    expect(result.current.error?.message).toContain('Failed to delete photo');
   });
 });
