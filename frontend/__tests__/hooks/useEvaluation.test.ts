@@ -1,10 +1,21 @@
 import { renderHook, act } from '@testing-library/react';
 import { useEvaluation } from '@/hooks/useEvaluation';
-import { mockUseEvaluation } from '@/utils/test-utils';
 
-// Mock the evaluation hook
-jest.mock('@/hooks/useEvaluation', () => ({
-  useEvaluation: () => mockUseEvaluation()
+// Create mock API functions
+const mockApiService = {
+  animals: {
+    get: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    list: jest.fn()
+  }
+};
+
+// Mock the API service before importing the hook
+jest.mock('@/services/api', () => ({
+  __esModule: true,
+  default: mockApiService
 }));
 
 describe('useEvaluation', () => {
@@ -34,8 +45,7 @@ describe('useEvaluation', () => {
   });
 
   it('handles evaluation fetching', async () => {
-    const { fetchEvaluation } = mockUseEvaluation();
-    (fetchEvaluation as jest.Mock).mockResolvedValueOnce(mockAnimal);
+    mockApiService.animals.get.mockResolvedValueOnce(mockAnimal);
 
     const { result } = renderHook(() => useEvaluation('123'));
 
@@ -50,7 +60,7 @@ describe('useEvaluation', () => {
 
     expect(result.current.loading).toBe(false);
     expect(result.current.evaluation).toEqual(mockAnimal);
-    expect(fetchEvaluation).toHaveBeenCalled();
+    expect(mockApiService.animals.get).toHaveBeenCalledWith('123');
   });
 
   it('handles evaluation saving for new animal', async () => {
@@ -69,8 +79,7 @@ describe('useEvaluation', () => {
       images: [],
     };
 
-    const { saveEvaluation } = mockUseEvaluation();
-    (saveEvaluation as jest.Mock).mockResolvedValueOnce({ ...newAnimal, id: '456' });
+    mockApiService.animals.create.mockResolvedValueOnce({ ...newAnimal, id: '456' });
 
     const { result } = renderHook(() => useEvaluation());
 
@@ -80,7 +89,7 @@ describe('useEvaluation', () => {
 
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
-    expect(saveEvaluation).toHaveBeenCalledWith(newAnimal);
+    expect(mockApiService.animals.create).toHaveBeenCalledWith(newAnimal);
   });
 
   it('handles evaluation saving for existing animal', async () => {
@@ -88,8 +97,7 @@ describe('useEvaluation', () => {
       notes: 'Updated notes',
     };
 
-    const { saveEvaluation } = mockUseEvaluation();
-    (saveEvaluation as jest.Mock).mockResolvedValueOnce({ ...mockAnimal, ...updates });
+    mockApiService.animals.update.mockResolvedValueOnce({ ...mockAnimal, ...updates });
 
     const { result } = renderHook(() => useEvaluation('123'));
 
@@ -99,13 +107,12 @@ describe('useEvaluation', () => {
 
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
-    expect(saveEvaluation).toHaveBeenCalledWith(updates);
+    expect(mockApiService.animals.update).toHaveBeenCalledWith('123', updates);
   });
 
   it('handles fetch error', async () => {
     const error = new Error('Failed to fetch');
-    const { fetchEvaluation } = mockUseEvaluation();
-    (fetchEvaluation as jest.Mock).mockRejectedValueOnce(error);
+    mockApiService.animals.get.mockRejectedValueOnce(error);
 
     const { result } = renderHook(() => useEvaluation('123'));
 
@@ -124,8 +131,7 @@ describe('useEvaluation', () => {
 
   it('handles save error', async () => {
     const error = new Error('Failed to save');
-    const { saveEvaluation } = mockUseEvaluation();
-    (saveEvaluation as jest.Mock).mockRejectedValueOnce(error);
+    mockApiService.animals.create.mockRejectedValueOnce(error);
 
     const { result } = renderHook(() => useEvaluation());
 

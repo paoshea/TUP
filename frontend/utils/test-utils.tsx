@@ -1,5 +1,5 @@
 import React from 'react';
-import { render as rtlRender } from '@testing-library/react';
+import { render as rtlRender, RenderOptions } from '@testing-library/react';
 
 // Mock data
 export const mockAnimal = {
@@ -27,6 +27,11 @@ const MockLivestockContext = React.createContext({
   refreshAnimals: jest.fn(),
 });
 
+// Custom render function
+interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
+  wrapper?: React.ComponentType<{ children: React.ReactNode }>;
+}
+
 function AllTheProviders({ children }: { children: React.ReactNode }) {
   return (
     <MockUIContext.Provider value={{ toast: jest.fn(), setLoading: jest.fn() }}>
@@ -39,15 +44,36 @@ function AllTheProviders({ children }: { children: React.ReactNode }) {
   );
 }
 
-function render(ui: React.ReactElement, options = {}) {
-  return rtlRender(ui, { wrapper: AllTheProviders, ...options });
+export function render(ui: React.ReactElement, options: CustomRenderOptions = {}) {
+  const { wrapper: Wrapper, ...restOptions } = options;
+
+  function CustomWrapper({ children }: { children: React.ReactNode }) {
+    return Wrapper ? (
+      <AllTheProviders>
+        <Wrapper>{children}</Wrapper>
+      </AllTheProviders>
+    ) : (
+      <AllTheProviders>{children}</AllTheProviders>
+    );
+  }
+
+  const result = rtlRender(ui, {
+    wrapper: CustomWrapper,
+    ...restOptions,
+  });
+
+  return {
+    ...result,
+    rerender: (rerenderUi: React.ReactElement) => {
+      result.rerender(
+        <CustomWrapper>{rerenderUi}</CustomWrapper>
+      );
+    },
+  };
 }
 
 // Re-export everything
 export * from '@testing-library/react';
-
-// Override render method
-export { render };
 
 // Mock hooks
 export function mockUseAI() {
@@ -60,8 +86,12 @@ export function mockUseAI() {
       recommendations: ['Test recommendation'],
       confidence: 85
     }),
-    getRecommendations: jest.fn(),
-    compareWithHistorical: jest.fn(),
+    getRecommendations: jest.fn().mockResolvedValue(['Test recommendation']),
+    compareWithHistorical: jest.fn().mockResolvedValue({
+      improvements: ['Test improvement'],
+      trends: { 'Test Metric': 5 },
+      predictions: ['Test prediction']
+    }),
     resetAnalysis: jest.fn(),
   };
 }

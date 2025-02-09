@@ -1,10 +1,18 @@
 import { renderHook, act } from '@testing-library/react';
 import { usePhotos } from '@/hooks/usePhotos';
-import { mockStorage } from '@/utils/test-utils';
 
+// Create mock storage service
+const mockStorageService = {
+  uploadPhoto: jest.fn().mockResolvedValue({ path: 'test-url' }),
+  getPhotoUrl: jest.fn().mockReturnValue('test-url'),
+  deletePhoto: jest.fn().mockResolvedValue(undefined),
+  getPhotoData: jest.fn().mockResolvedValue({ url: 'test-url', metadata: {} })
+};
+
+// Mock the storage service before importing the hook
 jest.mock('@/services/storage', () => ({
-  ...jest.requireActual('@/services/storage'),
-  ...mockStorage
+  __esModule: true,
+  default: mockStorageService
 }));
 
 describe('usePhotos', () => {
@@ -33,12 +41,12 @@ describe('usePhotos', () => {
     expect(result.current.uploading).toBe(false);
     expect(result.current.error).toBeNull();
     expect(uploadedUrl).toBe('test-url');
-    expect(mockStorage.uploadPhoto).toHaveBeenCalledWith(mockFile, expect.any(String));
+    expect(mockStorageService.uploadPhoto).toHaveBeenCalledWith(mockFile, expect.any(String));
   });
 
   it('handles upload error', async () => {
     const error = new Error('Upload failed');
-    mockStorage.uploadPhoto.mockRejectedValueOnce(error);
+    mockStorageService.uploadPhoto.mockRejectedValueOnce(error);
 
     const { result } = renderHook(() => usePhotos(mockAnimalId));
 
@@ -65,12 +73,12 @@ describe('usePhotos', () => {
     });
 
     expect(result.current.error).toBeNull();
-    expect(mockStorage.deletePhoto).toHaveBeenCalledWith(photoPath);
+    expect(mockStorageService.deletePhoto).toHaveBeenCalledWith(photoPath);
   });
 
   it('handles deletion error', async () => {
     const error = new Error('Delete failed');
-    mockStorage.deletePhoto.mockRejectedValueOnce(error);
+    mockStorageService.deletePhoto.mockRejectedValueOnce(error);
 
     const { result } = renderHook(() => usePhotos(mockAnimalId));
     const photoPath = 'test-path/photo.jpg';

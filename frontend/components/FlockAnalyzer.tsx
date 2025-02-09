@@ -21,15 +21,20 @@ export function FlockAnalyzer({ animals }: FlockAnalyzerProps) {
   } | null>(null);
 
   const handleAnalyze = async (animal: Animal) => {
-    setSelectedAnimal(animal);
-    await analyzeAnimal(animal);
-    
-    // Get additional insights
-    const recs = await getRecommendations(animal.id);
-    setRecommendations(recs);
-    
-    const comp = await compareWithHistorical(animal.id);
-    setComparison(comp);
+    try {
+      setSelectedAnimal(animal);
+      await analyzeAnimal(animal);
+      
+      // Get additional insights
+      const recs = await getRecommendations(animal.id);
+      setRecommendations(recs);
+      
+      const comp = await compareWithHistorical(animal.id);
+      setComparison(comp);
+    } catch (error) {
+      // Error will be handled by the useAI hook
+      console.error('Analysis failed:', error);
+    }
   };
 
   return (
@@ -58,7 +63,7 @@ export function FlockAnalyzer({ animals }: FlockAnalyzerProps) {
             >
               {loading && selectedAnimal?.id === animal.id ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" data-testid="loading-spinner" />
                   Analyzing...
                 </>
               ) : (
@@ -88,7 +93,7 @@ export function FlockAnalyzer({ animals }: FlockAnalyzerProps) {
             </div>
 
             {/* Recommendations */}
-            {recommendations.length > 0 && (
+            {recommendations && recommendations.length > 0 && (
               <div>
                 <h4 className="font-medium mb-2">Recommendations</h4>
                 <ul className="list-disc list-inside space-y-1">

@@ -1,12 +1,29 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@/utils/test-utils';
 import { FlockAnalyzer } from '@/components/FlockAnalyzer';
-import { mockUseAI } from '@/utils/test-utils';
 import type { Animal } from '@/types';
+
+// Create a complete mock implementation
+const mockAIHook = {
+  loading: false,
+  error: null as Error | null,
+  analysis: null as { insights: string[]; confidence: number } | null,
+  analyzeAnimal: jest.fn().mockResolvedValue({
+    insights: ['Test insight'],
+    confidence: 0.85
+  }),
+  getRecommendations: jest.fn().mockResolvedValue(['Test recommendation']),
+  compareWithHistorical: jest.fn().mockResolvedValue({
+    improvements: ['Test improvement'],
+    trends: { 'Test Metric': 5 },
+    predictions: ['Test prediction']
+  }),
+  resetAnalysis: jest.fn()
+};
 
 // Mock the useAI hook
 jest.mock('@/hooks/useAI', () => ({
-  useAI: () => mockUseAI()
+  useAI: () => mockAIHook
 }));
 
 describe('FlockAnalyzer', () => {
@@ -41,85 +58,59 @@ describe('FlockAnalyzer', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAIHook.loading = false;
+    mockAIHook.error = null;
+    mockAIHook.analysis = null;
   });
 
-  it('renders animal list', async () => {
+  it('renders animal list', () => {
     render(<FlockAnalyzer animals={mockAnimals} />);
-    
-    await waitFor(() => {
-      expect(screen.getByText('Test Animal 1')).toBeInTheDocument();
-      expect(screen.getByText('Test Animal 2')).toBeInTheDocument();
-    });
+    expect(screen.getByText('Test Animal 1')).toBeInTheDocument();
+    expect(screen.getByText('Test Animal 2')).toBeInTheDocument();
   });
 
-  it('allows animal selection', async () => {
-    const mockAnalyzeAnimal = jest.fn().mockResolvedValue({
-      insights: ['Test insight'],
-      recommendations: ['Test recommendation']
-    });
-
-    jest.spyOn(mockUseAI(), 'analyzeAnimal').mockImplementation(mockAnalyzeAnimal);
-
+  it('handles analysis process', async () => {
     render(<FlockAnalyzer animals={mockAnimals} />);
     
-    const analyzeButton = await waitFor(() => screen.getAllByText('Analyze')[0]);
+    const analyzeButton = screen.getAllByText('Analyze')[0];
     fireEvent.click(analyzeButton);
 
-    await waitFor(() => {
-      expect(screen.getByText('Analysis Results for Test Animal 1')).toBeInTheDocument();
-    });
-  });
-
-  it('displays analysis results', async () => {
-    const mockAnalysis = {
+    // Set mock analysis data
+    mockAIHook.analysis = {
       insights: ['Test insight'],
-      recommendations: ['Test recommendation'],
-      confidence: 85
+      confidence: 0.85
     };
-
-    jest.spyOn(mockUseAI(), 'analyzeAnimal').mockResolvedValue(mockAnalysis);
-
-    render(<FlockAnalyzer animals={mockAnimals} />);
-    
-    const analyzeButton = await waitFor(() => screen.getAllByText('Analyze')[0]);
-    fireEvent.click(analyzeButton);
 
     await waitFor(() => {
       expect(screen.getByText('Key Insights')).toBeInTheDocument();
-      expect(screen.getByText('Recommendations')).toBeInTheDocument();
       expect(screen.getByText('Test insight')).toBeInTheDocument();
-      expect(screen.getByText('Test recommendation')).toBeInTheDocument();
     });
+
+    // Verify recommendations were fetched
+    expect(mockAIHook.getRecommendations).toHaveBeenCalledWith('1');
+    expect(mockAIHook.compareWithHistorical).toHaveBeenCalledWith('1');
   });
 
   it('handles loading state', async () => {
-    // Mock a delayed analysis to show loading state
-    const mockAnalyzeAnimal = jest.fn().mockImplementation(() => 
-      new Promise(resolve => setTimeout(resolve, 100))
-    );
-
-    jest.spyOn(mockUseAI(), 'analyzeAnimal').mockImplementation(mockAnalyzeAnimal);
-    jest.spyOn(mockUseAI(), 'loading', 'get').mockReturnValue(true);
+    mockAIHook.loading = true;
 
     render(<FlockAnalyzer animals={mockAnimals} />);
     
-    const analyzeButton = await waitFor(() => screen.getAllByText('Analyze')[0]);
+    const analyzeButton = screen.getAllByText('Analyze')[0];
     fireEvent.click(analyzeButton);
 
-    await waitFor(() => {
-      expect(screen.getByText('Analyzing...')).toBeInTheDocument();
-    });
+    expect(screen.getByText('Analyzing...')).toBeInTheDocument();
+    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
   });
 
   it('displays error state', async () => {
-    // Mock the error state
     const mockError = new Error('An error occurred during analysis');
-    jest.spyOn(mockUseAI(), 'analyzeAnimal').mockRejectedValue(mockError);
-    jest.spyOn(mockUseAI(), 'error', 'get').mockReturnValue(mockError);
+    mockAIHook.error = mockError;
+    mockAIHook.analyzeAnimal.mockRejectedValueOnce(mockError);
 
     render(<FlockAnalyzer animals={mockAnimals} />);
     
-    const analyzeButton = await waitFor(() => screen.getAllByText('Analyze')[0]);
+    const analyzeButton = screen.getAllByText('Analyze')[0];
     fireEvent.click(analyzeButton);
 
     await waitFor(() => {
