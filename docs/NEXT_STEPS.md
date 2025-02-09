@@ -47,14 +47,6 @@
   - Photo management endpoints
 
 # [Pending]
-
-## Documentation Files
-- [ ] `/docs/API.md` - API documentation and endpoints
-- [ ] `/docs/CONTRIBUTING.md` - Contribution guidelines
-- [ ] `/docs/CHANGELOG.md` - Version history
-- [ ] `/docs/SECURITY.md` - Security policies
-- [ ] `/docs/DEPLOYMENT.md` - Deployment procedures
-
 ## Components
 - [ ] `/src/components/LivestockSelector.tsx` - Multi-species support
 - [ ] `/src/components/BreedDirectory.tsx` - Breed information
@@ -92,19 +84,26 @@
 - [ ] Team schema
 - [ ] Historical data schema
 
-## Security Implementation
-- [ ] Authentication flow
-- [ ] Authorization rules
-- [ ] Data encryption
-- [ ] API security
-- [ ] File upload security
-
 ## Performance Optimization
 - [ ] Code splitting
 - [ ] Image optimization
 - [ ] Caching strategy
 - [ ] Bundle optimization
 - [ ] API response optimization
+
+## Security Implementation
+- [ ] Authentication flow
+- [ ] Authorization rules
+- [ ] Data encryption
+- [ ] API security
+- [ ] File upload security
+ 
+## Documentation Files
+- [ ] `/docs/API.md` - API documentation and endpoints
+- [ ] `/docs/CONTRIBUTING.md` - Contribution guidelines
+- [ ] `/docs/CHANGELOG.md` - Version history
+- [ ] `/docs/SECURITY.md` - Security policies
+- [ ] `/docs/DEPLOYMENT.md` - Deployment procedures
 
 ## Deployment Setup
 - [ ] CI/CD pipeline
@@ -116,14 +115,14 @@
 ## Next Actions Priority
 1. Complete backend API implementation
 2. Set up database and schemas
-3. Implement authentication system
-4. Add remaining UI components
-5. Implement data services
-6. Set up testing framework
-7. Add security measures
-8. Configure deployment pipeline
-9. Complete documentation
-10. Optimize performance
+3. Add remaining UI components
+4. Implement data services
+5. Add security measures
+6. Configure deployment pipeline
+7. Optimize performance
+8. Complete documentation
+9. Set up testing framework
+10. Implement authentication system
 
 ## Getting Started
 1. Clone repository
