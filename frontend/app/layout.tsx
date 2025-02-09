@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -19,14 +19,15 @@ export const metadata: Metadata = {
     'breeding',
     'agriculture'
   ],
-  manifest: '/manifest.json',
+  manifest: '/manifest.json'
+};
+
+export const viewport: Viewport = {
   themeColor: '#007bff',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false
-  }
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false
 };
 
 export default function RootLayout({

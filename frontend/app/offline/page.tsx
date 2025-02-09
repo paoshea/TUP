@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { WifiOff, RefreshCw } from 'lucide-react';
+import { WifiOff } from 'lucide-react';
+import { RefreshButton } from '@/components/RefreshButton';
 
 export default function OfflinePage() {
   return (
@@ -24,13 +24,7 @@ export default function OfflinePage() {
               <li>Review saved show information</li>
             </ul>
             <div className="flex justify-center mt-6">
-              <Button
-                onClick={() => window.location.reload()}
-                className="flex items-center space-x-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                <span>Try Again</span>
-              </Button>
+              <RefreshButton />
             </div>
           </div>
         </CardContent>

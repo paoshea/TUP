@@ -262,16 +262,21 @@ npm run dev -- --turbo=false
 ```
 
 ### 4. TypeScript Errors
+ run the build commands for both projects. 
+
+# Backend
+Start with the backend since it's simpler (just TypeScript compilation).
 ```bash
+cd backend
+rm -rf dist
+npm run build
+```
 # Frontend
+Next, build the frontend, which uses Next.js build system.
+```bash
 cd frontend
 rm -rf .next
 rm -rf node_modules/.cache
-npm run build
-
-# Backend
-cd backend
-rm -rf dist
 npm run build
 ```
 
