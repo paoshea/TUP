@@ -1,5 +1,7 @@
 ## Implementation Status Update
 
+# MOBILE.md
+
 # [Implemented]
 - Project base structure and configuration
 - Next.js frontend setup with TypeScript and Tailwind

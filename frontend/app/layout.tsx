@@ -1,11 +1,8 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
-});
+import { inter } from './config';
+import { ThemeProvider } from 'next-themes';
+import StyledJsxRegistry from './registry';
 
 export const metadata: Metadata = {
   title: 'TUP Livestock Management System',
@@ -36,8 +33,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.variable}>
-        {children}
+      <body className={`${inter.variable} antialiased`}>
+        <StyledJsxRegistry>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+          >{children}</ThemeProvider>
+        </StyledJsxRegistry>
       </body>
     </html>
   );

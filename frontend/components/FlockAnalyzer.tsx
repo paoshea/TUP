@@ -4,6 +4,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
 import { Loader2 } from 'lucide-react';
+import { ErrorBoundary } from './ErrorBoundary';
 import type { Animal } from '@/types';
 
 interface FlockAnalyzerProps {
@@ -46,6 +47,7 @@ export function FlockAnalyzer({ animals }: FlockAnalyzerProps) {
   const displayError = error || analysisError;
 
   return (
+    <ErrorBoundary>
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">Flock Analysis</h2>
       
@@ -161,5 +163,6 @@ export function FlockAnalyzer({ animals }: FlockAnalyzerProps) {
         </Card>
       )}
     </div>
+    </ErrorBoundary>
   );
 }
