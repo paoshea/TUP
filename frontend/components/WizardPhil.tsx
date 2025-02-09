@@ -15,7 +15,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Bot, Send, Sparkles, TrendingUp, Award, LineChart, Mic, Camera } from 'lucide-react';
 import Image from 'next/image';
-import { aiService } from '@/services/ai';
+import { anthropicService } from '@/services/anthropic.service';
 import { livestockAI } from '@/services/livestockAI';
 import { photoAnalysis } from '@/services/photoAnalysis';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
@@ -149,7 +149,7 @@ export function WizardPhil() {
     setIsAnalyzing(true);
 
     try {
-      const response = await aiService.processMessage(input);
+      const response = await anthropicService.processMessage(input);
 
       if (input.toLowerCase().includes('analysis') || 
           input.toLowerCase().includes('performance') ||
