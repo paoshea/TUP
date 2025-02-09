@@ -15,6 +15,9 @@ cd ../frontend
 npm run dev
 ```
 
+rm -rf node_modules package-lock.json frontend/node_modules frontend/package-lock.json && npm install
+npm run dev --workspace=frontend
+
 Expected output:
 ```
 > frontend@0.1.0 dev

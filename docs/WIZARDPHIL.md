@@ -275,3 +275,137 @@ export class SyncQueue {
 
 WizardPhil has evolved from a basic AI assistant to a comprehensive livestock management tool with advanced capabilities. 
 The implemented features provide a solid foundation for further enhancements, while the pending features represent opportunities for continued improvement and expansion of functionality.
+
+## ANTHROPIC API
+To switch WizardPhil to use the Anthropic API instead of OpenAI, 
+
+import Anthropic from '@anthropic-ai/sdk';
+
+interface AnthropicConfig {
+  apiKey: string;
+  model: string;
+}
+
+interface AnthropicResponse {
+  content: string;
+  confidence: number;
+  suggestions?: string[];
+  relatedTopics?: string[];
+}
+
+export const ANTHROPIC_CONFIG: AnthropicConfig = {
+  apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY || '',
+  model: 'claude-3-opus-20240229'
+};
+
+export class AnthropicService {
+  private static instance: AnthropicService;
+  private client: Anthropic;
+
+  private constructor() {
+    this.client = new Anthropic({
+      apiKey: ANTHROPIC_CONFIG.apiKey
+    });
+  }
+
+  static getInstance(): AnthropicService {
+    if (!this.instance) {
+      this.instance = new AnthropicService();
+    }
+    return this.instance;
+  }
+
+  async query(prompt: string): Promise<string> {
+    try {
+      const message = await this.client.messages.create({
+        model: ANTHROPIC_CONFIG.model,
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }],
+        system: `You are WizardPhil, an expert AI assistant specializing in North Country Cheviot sheep analysis. 
+                You have deep knowledge of breed standards, show preparation, performance evaluation, and breeding programs.
+                Focus on providing specific, actionable insights related to:
+                - Physical characteristics assessment
+                - Show preparation guidance
+                - Performance metrics analysis
+                - Breeding program recommendations
+                Always maintain a professional yet approachable tone.`
+      });
+
+      return message.content[0].text;
+    } catch (error) {
+      console.error('Error querying Anthropic:', error);
+      throw error;
+    }
+  }
+
+  async processMessage(message: string): Promise<AnthropicResponse> {
+    try {
+      const response = await this.query(message);
+      
+      // Process the response to match your application's expected format
+      return {
+        content: response,
+        confidence: 0.95,
+        suggestions: this.extractSuggestions(response),
+        relatedTopics: this.extractTopics(response)
+      };
+    } catch (error) {
+      console.error('Error processing message:', error);
+      throw error;
+    }
+  }
+
+  private extractSuggestions(response: string): string[] {
+    // Implement logic to extract relevant suggestions from the response
+    // This is a simplified example
+    const suggestions = [
+      'Review breed standards',
+      'Check show preparation guidelines',
+      'Analyze recent performance data'
+    ];
+    return suggestions;
+  }
+
+  private extractTopics(response: string): string[] {
+    // Implement logic to extract related topics from the response
+    // This is a simplified example
+    const topics = [
+      'Breed Standards',
+      'Show Preparation',
+      'Performance Analysis'
+    ];
+    return topics;
+  }
+}
+
+export const anthropicService = AnthropicService.getInstance(); 
+
+# To use this with WizardPhil:
+
+- First, install the Anthropic SDK:
+bash
+npm install @anthropic-ai/sdk
+
+- Add your Anthropic API key to your environment variables:
+
+.env
+NEXT_PUBLIC_ANTHROPIC_API_KEY=your-api-key-here
+
+- Modify your WizardPhil component to use the Anthropic service:
+typescript
+import { anthropicService } from '@/services/anthropic.service';
+
+// Replace existing AI service with Anthropic
+const handleSend = async () => {
+  // ... existing message handling code ...
+
+  try {
+    const response = await anthropicService.processMessage(input);
+    // Rest of your handling code remains the same
+  } catch (error) {
+    console.error('Error:', error);
+  }
+};
