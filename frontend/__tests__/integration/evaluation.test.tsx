@@ -1,204 +1,119 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@/utils/test-utils';
-import { EvaluationForm } from '@/components/EvaluationForm';
-import { FlockAnalyzer } from '@/components/FlockAnalyzer';
-import { mockUseAI } from '@/utils/test-utils';
-import type { Animal } from '@/types';
+import { EvaluationForm } from '@/components/features/evaluations';
+import { FlockAnalyzer } from '@/components/features/animals';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { mockStore } from '@/lib/mock/store';
 
-// Mock hooks
-jest.mock('@/hooks/useAI', () => ({
-  useAI: () => mockUseAI()
-}));
-
-// Mock useOfflineSync hook
-jest.mock('@/hooks/useOfflineSync', () => ({
-  useOfflineSync: () => ({
-    isOnline: true,
-    isSyncing: false,
-    syncQueue: [],
-    saveOffline: jest.fn(),
-    syncQueuedItems: jest.fn().mockResolvedValue(undefined)
-  })
-}));
-
-describe('Evaluation Flow', () => {
-  const mockAnimal: Animal = {
-    id: 'test-animal-123',
+describe('Evaluation Integration', () => {
+  const mockAnimal = {
+    id: 'test-animal-1',
     name: 'Test Animal',
-    category: 'livestock',
     breed: 'Test Breed',
-    region: 'Test Region',
+    status: 'Active',
     scores: {
       movement: 8,
       conformation: 7,
       muscleDevelopment: 9,
-      breedCharacteristics: 8
-    }
-  };
-
-  const mockEvaluation = {
-    id: 'test-eval-123',
-    scores: {
-      movement: 8,
-      conformation: 7,
-      muscleDevelopment: 9,
-      breedCharacteristics: 8
+      breedCharacteristics: 8,
     },
-    notes: 'Test evaluation notes',
-    images: []
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // Set up default mock implementations
-    jest.spyOn(mockUseAI(), 'analyzeAnimal').mockResolvedValue({
-      insights: ['Test insight'],
-      recommendations: ['Test recommendation'],
-      confidence: 85
+    mockStore.getAnimal.mockReturnValue(mockAnimal);
+  });
+
+  it('completes an evaluation flow', async () => {
+    render(
+      <Card>
+        <CardHeader>
+          <CardTitle>Evaluation</CardTitle>
+          <CardDescription>Complete evaluation for {mockAnimal.name}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <EvaluationForm
+            animalId={mockAnimal.id}
+            onComplete={jest.fn()}
+          />
+        </CardContent>
+      </Card>
+    );
+
+    // Fill in evaluation form
+    fireEvent.change(screen.getByLabelText(/Movement/i), { target: { value: '8' } });
+    fireEvent.change(screen.getByLabelText(/Conformation/i), { target: { value: '7' } });
+    fireEvent.change(screen.getByLabelText(/Muscle Development/i), { target: { value: '9' } });
+    fireEvent.change(screen.getByLabelText(/Breed Characteristics/i), { target: { value: '8' } });
+    fireEvent.change(screen.getByLabelText(/Notes/i), {
+      target: { value: 'Test evaluation notes' },
+    });
+
+    // Submit evaluation
+    fireEvent.click(screen.getByText(/Submit/i));
+
+    await waitFor(() => {
+      expect(mockStore.saveEvaluation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          animalId: mockAnimal.id,
+          scores: {
+            movement: 8,
+            conformation: 7,
+            muscleDevelopment: 9,
+            breedCharacteristics: 8,
+          },
+          notes: 'Test evaluation notes',
+        })
+      );
     });
   });
 
-  it('completes full evaluation process', async () => {
-    const mockSave = jest.fn().mockResolvedValue({ id: 'new-eval-123' });
-    
+  it('analyzes flock data after evaluation', async () => {
     render(
-      <>
-        <FlockAnalyzer animals={[mockAnimal]} />
-        <EvaluationForm
-          onSave={mockSave}
-          initialData={mockEvaluation}
-        />
-      </>
+      <Card>
+        <CardHeader>
+          <CardTitle>Flock Analysis</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FlockAnalyzer animals={[mockAnimal]} />
+        </CardContent>
+      </Card>
     );
 
-    // Select animal and wait for analysis
-    const analyzeButton = await waitFor(() => screen.getByText('Analyze'));
-    fireEvent.click(analyzeButton);
-
+    // Check if analysis is displayed
     await waitFor(() => {
-      expect(screen.getByText('Analysis Results for Test Animal')).toBeInTheDocument();
+      expect(screen.getByText(/Analysis Results/i)).toBeInTheDocument();
+      expect(screen.getByText(/Average Score/i)).toBeInTheDocument();
     });
 
-    // Update scores using slider
-    const movementSlider = await waitFor(() => 
-      screen.getByLabelText('Movement Score').closest('.flex-1')
-    );
-    
-    if (movementSlider) {
-      fireEvent.change(movementSlider, { target: { value: '9' } });
-    }
-
-    // Add notes
-    const notesInput = await waitFor(() => screen.getByLabelText('Evaluation Notes'));
-    fireEvent.change(notesInput, { target: { value: 'Updated notes' } });
-
-    // Save evaluation
-    const saveButton = await waitFor(() => screen.getByText('Save Evaluation'));
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(mockSave).toHaveBeenCalledWith(expect.objectContaining({
-        scores: expect.objectContaining({
-          movement: 9
-        }),
-        notes: 'Updated notes'
-      }));
-    });
+    // Verify scores are analyzed
+    const scores = Object.values(mockAnimal.scores);
+    const average = scores.reduce((a, b) => a + b, 0) / scores.length;
+    expect(screen.getByText(new RegExp(average.toFixed(1)))).toBeInTheDocument();
   });
 
-  it('handles validation and error states', async () => {
-    const mockError = new Error('Save failed');
-    const failedSave = jest.fn().mockRejectedValue(mockError);
+  it('handles offline state gracefully', async () => {
+    // Mock offline state
+    mockStore.isOnline.mockReturnValue(false);
 
     render(
-      <>
-        <FlockAnalyzer animals={[mockAnimal]} />
-        <EvaluationForm
-          onSave={failedSave}
-          initialData={mockEvaluation}
-        />
-      </>
+      <Card>
+        <CardContent>
+          <EvaluationForm
+            animalId={mockAnimal.id}
+            onComplete={jest.fn()}
+          />
+        </CardContent>
+      </Card>
     );
 
-    // Select animal and wait for analysis
-    const analyzeButton = await waitFor(() => screen.getByText('Analyze'));
-    fireEvent.click(analyzeButton);
+    // Fill and submit form
+    fireEvent.change(screen.getByLabelText(/Movement/i), { target: { value: '8' } });
+    fireEvent.click(screen.getByText(/Submit/i));
 
+    // Verify offline handling
     await waitFor(() => {
-      expect(screen.getByText('Analysis Results for Test Animal')).toBeInTheDocument();
-    });
-
-    // Enter invalid score using slider
-    const movementSlider = await waitFor(() => 
-      screen.getByLabelText('Movement Score').closest('.flex-1')
-    );
-    
-    if (movementSlider) {
-      fireEvent.change(movementSlider, { target: { value: '11' } });
-    }
-
-    // Try to save
-    const saveButton = await waitFor(() => screen.getByText('Save Evaluation'));
-    fireEvent.click(saveButton);
-
-    // Check validation error
-    await waitFor(() => {
-      expect(screen.getByText(/must be between 0 and 10/i)).toBeInTheDocument();
-    });
-
-    // Fix score and try again
-    if (movementSlider) {
-      fireEvent.change(movementSlider, { target: { value: '9' } });
-    }
-    fireEvent.click(saveButton);
-
-    // Check save error
-    await waitFor(() => {
-      expect(screen.getByText('Error saving evaluation. Please try again.')).toBeInTheDocument();
-    });
-  });
-
-  it('handles offline mode', async () => {
-    // Mock offline mode
-    jest.mock('@/hooks/useOfflineSync', () => ({
-      useOfflineSync: () => ({
-        isOnline: false,
-        isSyncing: false,
-        syncQueue: [],
-        saveOffline: jest.fn().mockResolvedValue(undefined),
-        syncQueuedItems: jest.fn().mockResolvedValue(undefined)
-      })
-    }));
-
-    render(
-      <>
-        <FlockAnalyzer animals={[mockAnimal]} />
-        <EvaluationForm
-          onSave={jest.fn()}
-          initialData={mockEvaluation}
-        />
-      </>
-    );
-
-    // Verify offline mode message
-    await waitFor(() => {
-      expect(screen.getByText('Offline Mode - Changes will sync when online')).toBeInTheDocument();
-    });
-
-    // Complete evaluation in offline mode
-    const analyzeButton = await waitFor(() => screen.getByText('Analyze'));
-    fireEvent.click(analyzeButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Analysis Results for Test Animal')).toBeInTheDocument();
-    });
-
-    // Save should trigger offline save
-    const saveButton = await waitFor(() => screen.getByText('Save Evaluation'));
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Evaluation saved offline. Will sync when back online.')).toBeInTheDocument();
+      expect(screen.getByText(/Saved offline/i)).toBeInTheDocument();
+      expect(mockStore.queueSync).toHaveBeenCalled();
     });
   });
 });

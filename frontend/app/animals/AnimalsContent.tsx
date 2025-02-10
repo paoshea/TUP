@@ -1,149 +1,111 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { Header } from '@/components/Header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { mockStore } from '@/lib/mock/store';
-import { PhotoGallery } from '@/components/PhotoGallery';
-import { EvaluationForm } from '@/components/EvaluationForm';
-import { Progress } from '@/components/ui/progress';
-import { Scale, Ruler, Award, Camera } from 'lucide-react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Plus, Calendar, Star } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { EnhancedTable } from '@/components/ui/enhanced-table';
+import { useAnimals } from '@/hooks/useEntities';
+import { storage } from '@/services/storage';
 import type { Animal } from '@/lib/types/mock';
 
 export default function AnimalsContent() {
-  const [animals, setAnimals] = useState<Animal[]>([]);
+  const router = useRouter();
+  const { data: animals, isLoading, refetch } = useAnimals();
+  const [view, setView] = useState<'table' | 'grid'>('table');
 
-  useEffect(() => {
-    setAnimals(mockStore.getAnimals());
-  }, []);
+  const handleAction = async (action: string, animal: Animal) => {
+    switch (action) {
+      case 'edit':
+        router.push(`/animals/${animal.id}/edit`);
+        break;
+      case 'delete':
+        if (confirm('Are you sure you want to delete this animal?')) {
+          await storage.deleteAnimal(animal.id);
+          refetch();
+        }
+        break;
+    }
+  };
+
+  const columns = [
+    {
+      header: 'Name',
+      accessorKey: 'name',
+      sortable: true,
+    },
+    {
+      header: 'Breed',
+      accessorKey: 'breed',
+      sortable: true,
+    },
+    {
+      header: 'Status',
+      accessorKey: 'status',
+      cell: ({ row }: { row: Animal }) => (
+        <Badge variant={row.status === 'Active' ? 'success' : 'secondary'}>
+          {row.status}
+        </Badge>
+      ),
+    },
+    {
+      header: 'Registration',
+      accessorKey: 'registrationNumber',
+    },
+    {
+      header: 'Last Evaluation',
+      accessorKey: 'lastEvaluation',
+      cell: ({ row }: { row: Animal }) => (
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-gray-500" />
+          {row.lastEvaluation ? new Date(row.lastEvaluation).toLocaleDateString() : 'No evaluation'}
+        </div>
+      ),
+    },
+    {
+      header: 'Score',
+      accessorKey: 'scores',
+      cell: ({ row }: { row: Animal }) => {
+        const average = Object.values(row.scores).reduce((a, b) => a + b, 0) / 4;
+        return (
+          <div className="flex items-center gap-2">
+            <Star className="h-4 w-4 text-yellow-500" />
+            {average.toFixed(1)}
+          </div>
+        );
+      },
+    },
+  ];
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto p-6">
-        <h1 className="text-3xl font-bold tracking-tight mb-6">
-          Animal Management
-        </h1>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold tracking-tight">Animals</h1>
+        <Button
+          onClick={() => router.push('/animals/new')}
+          className="bg-purple-600 hover:bg-purple-700"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Add Animal
+        </Button>
+      </div>
 
-        <div className="grid gap-6">
-          {animals.map(animal => (
-            <Card key={animal.id} className="border-t-4 border-t-blue-500">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {animal.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Details</h3>
-                    <div className="grid gap-4">
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/50">
-                        <Award className="h-5 w-5 text-blue-500" />
-                        <div>
-                          <p className="text-sm font-medium">Breed</p>
-                          <p className="text-sm text-muted-foreground">{animal.breed}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/50">
-                        <Ruler className="h-5 w-5 text-blue-500" />
-                        <div>
-                          <p className="text-sm font-medium">Age</p>
-                          <p className="text-sm text-muted-foreground">{animal.age} years</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/50">
-                        <Scale className="h-5 w-5 text-blue-500" />
-                        <div>
-                          <p className="text-sm font-medium">Weight</p>
-                          <p className="text-sm text-muted-foreground">{animal.weight} kg</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-medium">Photos</h3>
-                      <Camera className="h-5 w-5 text-blue-500" />
-                    </div>
-                    <div className="bg-blue-50/50 dark:bg-blue-950/50 p-4 rounded-lg">
-                      <PhotoGallery
-                        photos={animal.images}
-                        onPhotosChange={(photos) => {
-                          console.log('Photos updated:', photos);
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-8">
-                  <Card className="border-t-4 border-t-purple-500">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-medium">Performance Evaluation</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid md:grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>Movement</span>
-                              <span className="text-muted-foreground">{animal.scores.movement}/10</span>
-                            </div>
-                            <Progress value={animal.scores.movement * 10} className="bg-purple-100 dark:bg-purple-950">
-                              <div className="h-full bg-purple-500" style={{ width: `${animal.scores.movement * 10}%` }} />
-                            </Progress>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>Conformation</span>
-                              <span className="text-muted-foreground">{animal.scores.conformation}/10</span>
-                            </div>
-                            <Progress value={animal.scores.conformation * 10} className="bg-purple-100 dark:bg-purple-950">
-                              <div className="h-full bg-purple-500" style={{ width: `${animal.scores.conformation * 10}%` }} />
-                            </Progress>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>Muscle Development</span>
-                              <span className="text-muted-foreground">{animal.scores.muscleDevelopment}/10</span>
-                            </div>
-                            <Progress value={animal.scores.muscleDevelopment * 10} className="bg-purple-100 dark:bg-purple-950">
-                              <div className="h-full bg-purple-500" style={{ width: `${animal.scores.muscleDevelopment * 10}%` }} />
-                            </Progress>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>Breed Characteristics</span>
-                              <span className="text-muted-foreground">{animal.scores.breedCharacteristics}/10</span>
-                            </div>
-                            <Progress value={animal.scores.breedCharacteristics * 10} className="bg-purple-100 dark:bg-purple-950">
-                              <div className="h-full bg-purple-500" style={{ width: `${animal.scores.breedCharacteristics * 10}%` }} />
-                            </Progress>
-                          </div>
-                        </div>
-                        <div>
-                          <EvaluationForm
-                            initialData={{
-                              id: animal.id,
-                              scores: animal.scores,
-                              notes: '',
-                              images: [],
-                            }}
-                            onSave={(data) => {
-                              console.log('Evaluation saved:', data);
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </main>
+      <Card className="p-6">
+        <EnhancedTable
+          data={animals || []}
+          columns={columns}
+          onRowClick={(row) => router.push(`/animals/${row.id}`)}
+          onAction={handleAction}
+          searchable
+          searchKeys={['name', 'breed', 'registrationNumber']}
+        />
+      </Card>
     </div>
   );
 }

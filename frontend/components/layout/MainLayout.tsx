@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Home, ClipboardList, Award, Camera, User } from 'lucide-react';
-import { NavItem } from '@/types/navigation';
-import { MobileNav } from '../MobileNav';
+import type { NavItem } from '@/types/navigation';
+import { Header, MobileNav } from './Navigation';
 
 const navigationItems: NavItem[] = [
   {
@@ -40,9 +40,14 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Main content with padding for bottom navigation on mobile */}
-      <main className="pb-16 md:pb-0">
-        {children}
+      {/* Header */}
+      <Header />
+
+      {/* Main content with padding for header and bottom navigation */}
+      <main className="pt-16 pb-16 md:pb-0">
+        <div className="container mx-auto px-4">
+          {children}
+        </div>
       </main>
 
       {/* Mobile Navigation */}

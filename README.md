@@ -36,11 +36,19 @@ TUP is a comprehensive livestock evaluation and tracking platform designed speci
   - Natural language processing
   - Context-aware responses
   - Learning centre integration
+  - Speech synthesis for natural interaction
+  - Command-based voice control
 - **Knowledge Base**:
   - Comprehensive farming terminology
   - TUP-specific glossary
   - Best practices documentation
   - Show preparation guides
+  - Interactive learning tools
+- **Code Tools**:
+  - Code analysis and metrics
+  - Data generation utilities
+  - Validation frameworks
+  - Auto-fix capabilities
 
 ## 🛠 Tech Stack
 
@@ -53,6 +61,7 @@ TUP is a comprehensive livestock evaluation and tracking platform designed speci
 - React Query
 - Recharts for data visualization
 - Web Speech API for voice features
+- Speech synthesis for AI responses
 
 ### Backend
 - Node.js
@@ -62,10 +71,12 @@ TUP is a comprehensive livestock evaluation and tracking platform designed speci
 - Redis for caching
 - AWS S3 for image storage
 - AI/ML processing pipeline
+- Natural Language Processing tools
 
 ### Mobile
 - React Native
 - Expo
+- Voice integration capabilities
 
 ## 📱 System Requirements
 
@@ -73,12 +84,14 @@ TUP is a comprehensive livestock evaluation and tracking platform designed speci
 - iOS 12+ or Android 8+
 - Minimum 2GB free storage
 - Active internet connection for sync features
+- Microphone access for voice features
 
 ### Web Application
 - Modern web browser (Chrome, Firefox, Safari, Edge)
 - JavaScript enabled
 - Minimum 1024x768 screen resolution
 - Microphone access for voice features
+- Audio output for AI voice responses
 
 ## 🚀 Getting Started
 
@@ -131,12 +144,19 @@ Detailed documentation is available in the following sections:
 - [WizardPhil Guide](docs/WIZARDPHIL.md)
 - [Learning Centre](docs/LEARNING_CENTRE.md)
 - [Code Tools Guide](docs/CODE_TOOLS.md)
+- [Voice Integration](docs/VOICE.md)
+- [UI Components](docs/UI.md)
+- [AI Features](docs/AI.md)
 
 ## 🗄️ Project Structure
 ```
 tup-livestock-assistant/
 ├── frontend/                # Web application
 │   ├── components/         # Reusable React components
+│   │   ├── features/      # Feature-specific components
+│   │   ├── analytics/     # Analytics components
+│   │   ├── ai/           # AI-related components
+│   │   └── shared/       # Shared utilities
 │   ├── pages/             # Next.js pages
 │   ├── styles/            # Global styles and Tailwind config
 │   └── utils/             # Utility functions

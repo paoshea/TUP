@@ -3,7 +3,9 @@ export interface Animal {
   name: string;
   breed: string;
   age: number;
-  weight: number;
+  status: string;
+  registrationNumber: string;
+  birthDate: string;
   images: string[];
   scores: {
     movement: number;
@@ -12,6 +14,24 @@ export interface Animal {
     breedCharacteristics: number;
   };
   notes: string;
+  lastEvaluation?: string;
+}
+
+export interface Evaluation {
+  id: string;
+  animalId: string;
+  animalName: string;
+  date: string;
+  scores: {
+    movement: number;
+    conformation: number;
+    muscleDevelopment: number;
+    breedCharacteristics: number;
+  };
+  notes: string;
+  images: string[];
+  evaluator: string;
+  overallScore: number;
 }
 
 export interface Show {
@@ -20,8 +40,13 @@ export interface Show {
   date: string;
   location: string;
   status: 'upcoming' | 'ongoing' | 'completed';
-  participants: number;
+  entryCount: number;
   categories: string[];
+  description: string;
+  entryFee: number;
+  maxEntries: number;
+  registrationDeadline: string;
+  judgingCriteria: string[];
 }
 
 export interface Region {
@@ -41,7 +66,7 @@ export interface ChecklistItem {
   text: string;
   completed: boolean;
   category: string;
-  dueDate?: string;
+  dueDate: string;
   assignedTo?: string;
 }
 
@@ -50,6 +75,22 @@ export interface Statistics {
   upcomingShows: number;
   completedEvaluations: number;
   activeUsers: number;
+  averageScores: {
+    movement: number;
+    conformation: number;
+    muscleDevelopment: number;
+    breedCharacteristics: number;
+  };
+  showParticipation: {
+    registered: number;
+    upcoming: number;
+    completed: number;
+  };
+  evaluationTrends: {
+    lastMonth: number;
+    lastQuarter: number;
+    lastYear: number;
+  };
 }
 
 export interface User {
@@ -57,5 +98,8 @@ export interface User {
   name: string;
   email: string;
   role: string;
-  avatar?: string;
+  avatar: string;
+  farm: string;
+  location: string;
+  memberSince: string;
 }

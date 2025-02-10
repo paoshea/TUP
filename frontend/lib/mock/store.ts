@@ -5,8 +5,9 @@ import {
   generateStatistics,
   generateCurrentUser,
   generateShows,
+  generateEvaluations,
 } from './generators';
-import type { Animal, Region, ChecklistItem, Statistics, User, Show } from '../types/mock';
+import type { Animal, Region, ChecklistItem, Statistics, User, Show, Evaluation } from '../types/mock';
 
 class MockStore {
   private animals: Animal[];
@@ -15,6 +16,7 @@ class MockStore {
   private statistics: Statistics;
   private currentUser: User;
   private shows: Show[];
+  private evaluations: Evaluation[];
 
   constructor() {
     // Initialize with mock data
@@ -24,6 +26,7 @@ class MockStore {
     this.statistics = generateStatistics();
     this.currentUser = generateCurrentUser();
     this.shows = generateShows();
+    this.evaluations = generateEvaluations(this.animals);
   }
 
   // Animal methods
@@ -35,10 +38,24 @@ class MockStore {
     return this.animals.find(animal => animal.id === id);
   }
 
+  addAnimal(animal: Omit<Animal, 'id'>): Animal {
+    const newAnimal = {
+      id: `animal-${this.animals.length + 1}`,
+      ...animal
+    };
+    this.animals.push(newAnimal);
+    return newAnimal;
+  }
+
   updateAnimal(id: string, data: Partial<Animal>): void {
     this.animals = this.animals.map(animal =>
       animal.id === id ? { ...animal, ...data } : animal
     );
+  }
+
+  deleteAnimal(id: string): void {
+    this.animals = this.animals.filter(animal => animal.id !== id);
+    this.evaluations = this.evaluations.filter(evaluation => evaluation.animalId !== id);
   }
 
   // Show methods
@@ -50,8 +67,59 @@ class MockStore {
     return this.shows.find(show => show.id === id);
   }
 
+  addShow(show: Omit<Show, 'id'>): Show {
+    const newShow = {
+      id: `show-${this.shows.length + 1}`,
+      ...show
+    };
+    this.shows.push(newShow);
+    return newShow;
+  }
+
+  updateShow(id: string, data: Partial<Show>): void {
+    this.shows = this.shows.map(show =>
+      show.id === id ? { ...show, ...data } : show
+    );
+  }
+
+  deleteShow(id: string): void {
+    this.shows = this.shows.filter(show => show.id !== id);
+  }
+
   getUpcomingShows(): Show[] {
     return this.shows.filter(show => show.status === 'upcoming');
+  }
+
+  // Evaluation methods
+  getEvaluations(): Evaluation[] {
+    return this.evaluations;
+  }
+
+  getAnimalEvaluations(animalId: string): Evaluation[] {
+    return this.evaluations.filter(evaluation => evaluation.animalId === animalId);
+  }
+
+  getEvaluation(id: string): Evaluation | undefined {
+    return this.evaluations.find(evaluation => evaluation.id === id);
+  }
+
+  addEvaluation(evaluation: Omit<Evaluation, 'id'>): Evaluation {
+    const newEvaluation = {
+      id: `eval-${this.evaluations.length + 1}`,
+      ...evaluation
+    };
+    this.evaluations.push(newEvaluation);
+    return newEvaluation;
+  }
+
+  updateEvaluation(id: string, data: Partial<Evaluation>): void {
+    this.evaluations = this.evaluations.map(evaluation =>
+      evaluation.id === id ? { ...evaluation, ...data } : evaluation
+    );
+  }
+
+  deleteEvaluation(id: string): void {
+    this.evaluations = this.evaluations.filter(evaluation => evaluation.id !== id);
   }
 
   // Region methods
@@ -74,12 +142,17 @@ class MockStore {
     );
   }
 
-  addChecklistItem(item: Omit<ChecklistItem, 'id'>): void {
+  addChecklistItem(item: Omit<ChecklistItem, 'id'>): ChecklistItem {
     const newItem = {
       id: `check-${this.checklists.length + 1}`,
       ...item,
     };
     this.checklists.push(newItem);
+    return newItem;
+  }
+
+  deleteChecklistItem(id: string): void {
+    this.checklists = this.checklists.filter(item => item.id !== id);
   }
 
   // Statistics methods

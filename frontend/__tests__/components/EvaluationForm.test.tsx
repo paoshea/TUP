@@ -1,185 +1,106 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@/utils/test-utils';
-import { EvaluationForm } from '@/components/EvaluationForm';
+import { EvaluationForm } from '@/components/features/evaluations';
 import * as useOfflineSyncModule from '@/hooks/useOfflineSync';
+import { mockStore } from '@/lib/mock/store';
 
-// Mock useOfflineSync hook
+// Mock the useOfflineSync hook
 jest.mock('@/hooks/useOfflineSync', () => ({
-  useOfflineSync: () => ({
-    isOnline: true,
-    isSyncing: false,
-    syncQueue: [],
-    saveOffline: jest.fn(),
-    syncQueuedItems: jest.fn().mockResolvedValue(undefined)
-  })
+  __esModule: true,
+  default: jest.fn(),
 }));
 
 describe('EvaluationForm', () => {
-  const mockOnSave = jest.fn().mockResolvedValue({ id: 'test-eval-123' });
-  const mockInitialData = {
-    id: 'test-eval-123',
-    scores: {
-      movement: 8,
-      conformation: 7,
-      muscleDevelopment: 9,
-      breedCharacteristics: 8
-    },
-    notes: 'Initial notes',
-    images: []
+  const mockAnimal = {
+    id: 'test-animal-1',
+    name: 'Test Animal',
+    breed: 'Test Breed',
+    status: 'Active',
   };
+
+  const mockOnComplete = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  it('renders all score categories', async () => {
-    render(
-      <EvaluationForm
-        onSave={mockOnSave}
-        initialData={mockInitialData}
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Movement Score')).toBeInTheDocument();
-      expect(screen.getByText('Conformation Score')).toBeInTheDocument();
-      expect(screen.getByText('Muscle Development Score')).toBeInTheDocument();
-      expect(screen.getByText('Breed Characteristics Score')).toBeInTheDocument();
+    (useOfflineSyncModule.default as jest.Mock).mockReturnValue({
+      isOnline: true,
+      syncStatus: 'synced',
     });
   });
 
-  it('handles score changes', async () => {
-    render(
-      <EvaluationForm
-        onSave={mockOnSave}
-        initialData={mockInitialData}
-      />
-    );
+  it('renders the evaluation form correctly', () => {
+    render(<EvaluationForm animalId={mockAnimal.id} onComplete={mockOnComplete} />);
 
-    const movementSlider = await waitFor(() => 
-      screen.getByLabelText('Movement Score').closest('.flex-1')
-    );
-    
-    if (movementSlider) {
-      fireEvent.change(movementSlider, { target: { value: '9' } });
-    }
+    // Check for main form elements
+    expect(screen.getByText(/Movement/i)).toBeInTheDocument();
+    expect(screen.getByText(/Conformation/i)).toBeInTheDocument();
+    expect(screen.getByText(/Muscle Development/i)).toBeInTheDocument();
+    expect(screen.getByText(/Breed Characteristics/i)).toBeInTheDocument();
+  });
 
-    const saveButton = screen.getByText('Save Evaluation');
-    fireEvent.click(saveButton);
+  it('handles score inputs correctly', async () => {
+    render(<EvaluationForm animalId={mockAnimal.id} onComplete={mockOnComplete} />);
+
+    // Find score inputs
+    const movementInput = screen.getByLabelText(/Movement/i);
+    const conformationInput = screen.getByLabelText(/Conformation/i);
+
+    // Change scores
+    fireEvent.change(movementInput, { target: { value: '8' } });
+    fireEvent.change(conformationInput, { target: { value: '9' } });
+
+    // Check if values are updated
+    expect(movementInput).toHaveValue(8);
+    expect(conformationInput).toHaveValue(9);
+  });
+
+  it('submits the form with correct data', async () => {
+    const mockSubmit = jest.spyOn(mockStore, 'saveEvaluation');
+    render(<EvaluationForm animalId={mockAnimal.id} onComplete={mockOnComplete} />);
+
+    // Fill in form
+    fireEvent.change(screen.getByLabelText(/Movement/i), { target: { value: '8' } });
+    fireEvent.change(screen.getByLabelText(/Conformation/i), { target: { value: '9' } });
+    fireEvent.change(screen.getByLabelText(/Notes/i), {
+      target: { value: 'Test evaluation notes' },
+    });
+
+    // Submit form
+    fireEvent.click(screen.getByText(/Submit/i));
 
     await waitFor(() => {
-      expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({
-        scores: expect.objectContaining({
-          movement: 9
+      expect(mockSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          animalId: mockAnimal.id,
+          scores: expect.objectContaining({
+            movement: 8,
+            conformation: 9,
+          }),
+          notes: 'Test evaluation notes',
         })
-      }));
+      );
+      expect(mockOnComplete).toHaveBeenCalled();
     });
   });
 
-  it('handles notes input', async () => {
-    render(
-      <EvaluationForm
-        onSave={mockOnSave}
-        initialData={mockInitialData}
-      />
-    );
+  it('validates required fields', async () => {
+    render(<EvaluationForm animalId={mockAnimal.id} onComplete={mockOnComplete} />);
 
-    const notesInput = await waitFor(() => screen.getByLabelText('Evaluation Notes'));
-    fireEvent.change(notesInput, { target: { value: 'New test notes' } });
-
-    const saveButton = screen.getByText('Save Evaluation');
-    fireEvent.click(saveButton);
+    // Try to submit without filling required fields
+    fireEvent.click(screen.getByText(/Submit/i));
 
     await waitFor(() => {
-      expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({
-        notes: 'New test notes'
-      }));
+      expect(screen.getByText(/All scores are required/i)).toBeInTheDocument();
     });
   });
 
-  it('validates score ranges', async () => {
-    render(
-      <EvaluationForm
-        onSave={mockOnSave}
-        initialData={mockInitialData}
-      />
-    );
-
-    const movementSlider = await waitFor(() => 
-      screen.getByLabelText('Movement Score').closest('.flex-1')
-    );
-    
-    if (movementSlider) {
-      fireEvent.change(movementSlider, { target: { value: '11' } });
-    }
-
-    const saveButton = screen.getByText('Save Evaluation');
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/must be between 0 and 10/i)).toBeInTheDocument();
-      expect(mockOnSave).not.toHaveBeenCalled();
-    });
-  });
-
-  it('displays loading state during save', async () => {
-    const slowSave = jest.fn().mockImplementation(() => 
-      new Promise(resolve => setTimeout(() => resolve({ id: 'test-eval-123' }), 100))
-    );
-
-    render(
-      <EvaluationForm
-        onSave={slowSave}
-        initialData={mockInitialData}
-      />
-    );
-
-    const saveButton = screen.getByText('Save Evaluation');
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Saving...')).toBeInTheDocument();
-    });
-  });
-
-  it('handles save errors', async () => {
-    const mockError = new Error('Save failed');
-    const failedSave = jest.fn().mockRejectedValue(mockError);
-
-    render(
-      <EvaluationForm
-        onSave={failedSave}
-        initialData={mockInitialData}
-      />
-    );
-
-    const saveButton = screen.getByText('Save Evaluation');
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(screen.getByText('Error saving evaluation. Please try again.')).toBeInTheDocument();
-    });
-  });
-
-  it('handles offline mode', async () => {
-    // Mock offline mode
-    jest.spyOn(useOfflineSyncModule, 'useOfflineSync').mockImplementation(() => ({
+  it('handles offline state correctly', () => {
+    (useOfflineSyncModule.default as jest.Mock).mockReturnValue({
       isOnline: false,
-      isSyncing: false,
-      syncQueue: [],
-      saveOffline: jest.fn().mockResolvedValue(undefined),
-      syncQueuedItems: jest.fn().mockResolvedValue(undefined)
-    }));
-
-    render(
-      <EvaluationForm
-        onSave={mockOnSave}
-        initialData={mockInitialData}
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Offline Mode - Changes will sync when online')).toBeInTheDocument();
+      syncStatus: 'pending',
     });
+
+    render(<EvaluationForm animalId={mockAnimal.id} onComplete={mockOnComplete} />);
+
+    expect(screen.getByText(/Working Offline/i)).toBeInTheDocument();
   });
 });

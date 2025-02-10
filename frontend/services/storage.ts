@@ -1,63 +1,250 @@
-interface UploadResult {
-  path: string;
-  fileId: string;
+// Local Storage Keys
+const STORAGE_KEYS = {
+  USER: 'tup_user',
+  ANIMALS: 'tup_animals',
+  SHOWS: 'tup_shows',
+  EVALUATIONS: 'tup_evaluations',
+} as const;
+
+// Type for stored data with version control
+interface StoredData<T> {
+  version: number;
+  timestamp: number;
+  data: T;
 }
 
-export const storage = {
-  async uploadPhoto(file: File, path: string): Promise<UploadResult> {
+class LocalStorageService {
+  private getItem<T>(key: string): StoredData<T> | null {
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('path', path);
-
-      const response = await fetch('/api/photos', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to upload photo');
-      }
-
-      return await response.json();
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : null;
     } catch (error) {
-      throw new Error(`Failed to upload photo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error(`Error reading from localStorage: ${key}`, error);
+      return null;
     }
-  },
+  }
 
-  getPhotoUrl(path: string): string {
-    if (!path) throw new Error('Path is required');
-    return `/api/photos?path=${encodeURIComponent(path)}`;
-  },
-
-  async deletePhoto(path: string): Promise<void> {
+  private setItem<T>(key: string, data: T) {
     try {
-      const response = await fetch(`/api/photos?path=${encodeURIComponent(path)}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete photo');
-      }
+      const storedData: StoredData<T> = {
+        version: 1, // Increment when data structure changes
+        timestamp: Date.now(),
+        data,
+      };
+      localStorage.setItem(key, JSON.stringify(storedData));
     } catch (error) {
-      throw new Error(`Failed to delete photo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error(`Error writing to localStorage: ${key}`, error);
     }
-  },
+  }
 
-  async getPhotoData(path: string): Promise<Blob> {
-    try {
-      const response = await fetch(`/api/photos?path=${encodeURIComponent(path)}`);
+  // User Methods
+  getUser() {
+    const stored = this.getItem<any>(STORAGE_KEYS.USER);
+    return stored?.data || null;
+  }
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to get photo');
-      }
+  setUser(user: any) {
+    this.setItem(STORAGE_KEYS.USER, user);
+  }
 
-      return await response.blob();
-    } catch (error) {
-      throw new Error(`Failed to get photo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  // Animals Methods
+  getAnimals() {
+    const stored = this.getItem<any[]>(STORAGE_KEYS.ANIMALS);
+    return stored?.data || [];
+  }
+
+  setAnimals(animals: any[]) {
+    this.setItem(STORAGE_KEYS.ANIMALS, animals);
+  }
+
+  addAnimal(animal: any) {
+    const animals = this.getAnimals();
+    const newAnimal = {
+      id: `animal-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      ...animal,
+    };
+    animals.push(newAnimal);
+    this.setAnimals(animals);
+    return newAnimal;
+  }
+
+  updateAnimal(id: string, data: any) {
+    const animals = this.getAnimals();
+    const index = animals.findIndex(a => a.id === id);
+    if (index !== -1) {
+      animals[index] = {
+        ...animals[index],
+        ...data,
+        updatedAt: new Date().toISOString(),
+      };
+      this.setAnimals(animals);
+      return animals[index];
     }
-  },
-};
+    return null;
+  }
+
+  deleteAnimal(id: string) {
+    const animals = this.getAnimals();
+    const filtered = animals.filter(a => a.id !== id);
+    this.setAnimals(filtered);
+  }
+
+  // Shows Methods
+  getShows() {
+    const stored = this.getItem<any[]>(STORAGE_KEYS.SHOWS);
+    return stored?.data || [];
+  }
+
+  setShows(shows: any[]) {
+    this.setItem(STORAGE_KEYS.SHOWS, shows);
+  }
+
+  addShow(show: any) {
+    const shows = this.getShows();
+    const newShow = {
+      id: `show-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      ...show,
+    };
+    shows.push(newShow);
+    this.setShows(shows);
+    return newShow;
+  }
+
+  updateShow(id: string, data: any) {
+    const shows = this.getShows();
+    const index = shows.findIndex(s => s.id === id);
+    if (index !== -1) {
+      shows[index] = {
+        ...shows[index],
+        ...data,
+        updatedAt: new Date().toISOString(),
+      };
+      this.setShows(shows);
+      return shows[index];
+    }
+    return null;
+  }
+
+  deleteShow(id: string) {
+    const shows = this.getShows();
+    const filtered = shows.filter(s => s.id !== id);
+    this.setShows(filtered);
+  }
+
+  // Evaluations Methods
+  getEvaluations() {
+    const stored = this.getItem<any[]>(STORAGE_KEYS.EVALUATIONS);
+    return stored?.data || [];
+  }
+
+  setEvaluations(evaluations: any[]) {
+    this.setItem(STORAGE_KEYS.EVALUATIONS, evaluations);
+  }
+
+  addEvaluation(evaluation: any) {
+    const evaluations = this.getEvaluations();
+    const newEvaluation = {
+      id: `eval-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      ...evaluation,
+    };
+    evaluations.push(newEvaluation);
+    this.setEvaluations(evaluations);
+    return newEvaluation;
+  }
+
+  updateEvaluation(id: string, data: any) {
+    const evaluations = this.getEvaluations();
+    const index = evaluations.findIndex(evaluation => evaluation.id === id);
+    if (index !== -1) {
+      evaluations[index] = {
+        ...evaluations[index],
+        ...data,
+        updatedAt: new Date().toISOString(),
+      };
+      this.setEvaluations(evaluations);
+      return evaluations[index];
+    }
+    return null;
+  }
+
+  deleteEvaluation(id: string) {
+    const evaluations = this.getEvaluations();
+    const filtered = evaluations.filter(evaluation => evaluation.id !== id);
+    this.setEvaluations(filtered);
+  }
+
+  // Analytics Methods
+  getAnalytics() {
+    const animals = this.getAnimals();
+    const shows = this.getShows();
+    const evaluations = this.getEvaluations();
+
+    return {
+      totalAnimals: animals.length,
+      upcomingShows: shows.filter(s => s.status === 'upcoming').length,
+      completedEvaluations: evaluations.length,
+      averageScores: this.calculateAverageScores(evaluations),
+      showParticipation: {
+        registered: shows.length,
+        upcoming: shows.filter(s => s.status === 'upcoming').length,
+        completed: shows.filter(s => s.status === 'completed').length,
+      },
+      evaluationTrends: this.calculateEvaluationTrends(evaluations),
+    };
+  }
+
+  private calculateAverageScores(evaluations: any[]) {
+    if (evaluations.length === 0) {
+      return {
+        movement: 0,
+        conformation: 0,
+        muscleDevelopment: 0,
+        breedCharacteristics: 0,
+      };
+    }
+
+    const totals = evaluations.reduce((acc, evaluation) => ({
+      movement: acc.movement + evaluation.scores.movement,
+      conformation: acc.conformation + evaluation.scores.conformation,
+      muscleDevelopment: acc.muscleDevelopment + evaluation.scores.muscleDevelopment,
+      breedCharacteristics: acc.breedCharacteristics + evaluation.scores.breedCharacteristics,
+    }), {
+      movement: 0,
+      conformation: 0,
+      muscleDevelopment: 0,
+      breedCharacteristics: 0,
+    });
+
+    return {
+      movement: totals.movement / evaluations.length,
+      conformation: totals.conformation / evaluations.length,
+      muscleDevelopment: totals.muscleDevelopment / evaluations.length,
+      breedCharacteristics: totals.breedCharacteristics / evaluations.length,
+    };
+  }
+
+  private calculateEvaluationTrends(evaluations: any[]) {
+    const now = new Date();
+    const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    const quarterAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+    const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+
+    return {
+      lastMonth: evaluations.filter(e => new Date(e.createdAt) >= monthAgo).length,
+      lastQuarter: evaluations.filter(e => new Date(e.createdAt) >= quarterAgo).length,
+      lastYear: evaluations.filter(e => new Date(e.createdAt) >= yearAgo).length,
+    };
+  }
+
+  // Clear all data
+  clearAll() {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      localStorage.removeItem(key);
+    });
+  }
+}
+
+export const storage = new LocalStorageService();

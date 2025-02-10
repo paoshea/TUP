@@ -1,106 +1,87 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { Header } from '@/components/Header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
+import { WifiOff } from 'lucide-react';
+import { RegionalInsights } from '@/components/analytics';
+import { PreShowChecklist } from '@/components/features/shows';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { mockStore } from '@/lib/mock/store';
-import { RegionalInsights } from '@/components/RegionalInsights';
-import { PreShowChecklist } from '@/components/PreShowChecklist';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, Users } from 'lucide-react';
-import type { Show } from '@/lib/types/mock';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
 
 export default function ShowsPage() {
-  const [shows, setShows] = useState<Show[]>([]);
-
-  useEffect(() => {
-    setShows(mockStore.getShows());
-  }, []);
+  const [selectedShow, setSelectedShow] = useState(null);
+  const { isOnline } = useOfflineSync();
+  const shows = mockStore.getShows();
+  const upcomingShows = shows.filter(show => show.status === 'upcoming');
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto p-6">
-        <h1 className="text-3xl font-bold tracking-tight mb-6">
-          Show Management
-        </h1>
-
-        <div className="grid gap-6">
-          <section>
-            <h2 className="text-2xl font-semibold tracking-tight mb-4">Upcoming Shows</h2>
-            <div className="grid gap-4">
-              {shows.map(show => (
-                <Card key={show.id} className="bg-gradient-to-br from-blue-50 to-white dark:from-blue-950 dark:to-gray-900">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      {show.name}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid md:grid-cols-3 gap-6">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-blue-500" />
-                        <div>
-                          <p className="text-sm font-medium">Date</p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(show.date).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-blue-500" />
-                        <div>
-                          <p className="text-sm font-medium">Location</p>
-                          <p className="text-sm text-muted-foreground">{show.location}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-blue-500" />
-                        <div>
-                          <p className="text-sm font-medium">Participants</p>
-                          <p className="text-sm text-muted-foreground">{show.participants}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <p className="text-sm font-medium mb-2">Categories</p>
-                      <div className="flex flex-wrap gap-2">
-                        {show.categories.map(category => (
-                          <Badge key={category} variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                            {category}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <Card className="border-t-4 border-t-green-500">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold">Show Preparation</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PreShowChecklist />
-              </CardContent>
-            </Card>
-          </section>
-
-          <section>
-            <Card className="border-t-4 border-t-purple-500">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold">Regional Analysis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RegionalInsights />
-              </CardContent>
-            </Card>
-          </section>
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Shows</h1>
+          <Button
+            onClick={() => window.location.href = '/shows/new'}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            Add Show
+          </Button>
         </div>
-      </main>
+
+        {/* Offline Warning */}
+        {!isOnline && (
+          <Card className="bg-yellow-50 p-4">
+            <div className="flex items-center text-yellow-800">
+              <WifiOff className="h-5 w-5 mr-2" />
+              <p>You're currently offline. Some features may be limited.</p>
+            </div>
+          </Card>
+        )}
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Shows List */}
+          <div className="lg:col-span-2 space-y-4">
+            {upcomingShows.length > 0 ? (
+              upcomingShows.map(show => (
+                <Card
+                  key={show.id}
+                  className="p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => setSelectedShow(show)}
+                >
+                  <h3 className="font-semibold text-lg">{show.name}</h3>
+                  <p className="text-sm text-gray-600">
+                    {new Date(show.date).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm text-gray-600">{show.location}</p>
+                </Card>
+              ))
+            ) : (
+              <Card className="p-6 text-center">
+                <p className="text-gray-500">No upcoming shows</p>
+              </Card>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Regional Insights */}
+            <Card className="p-4">
+              <h2 className="text-lg font-semibold mb-4">Regional Insights</h2>
+              <RegionalInsights />
+            </Card>
+
+            {/* Pre-Show Checklist */}
+            {selectedShow && (
+              <Card className="p-4">
+                <h2 className="text-lg font-semibold mb-4">Show Checklist</h2>
+                <PreShowChecklist show={selectedShow} />
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
