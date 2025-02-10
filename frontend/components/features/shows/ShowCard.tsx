@@ -40,60 +40,80 @@ export function ShowCard({ show, onEdit, onDelete, onClick }: ShowCardProps) {
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-GB', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+    const dateObj = new Date(date);
+    // Use shorter format on mobile
+    const mobileFormat = {
+      month: 'short' as const,
+      day: 'numeric' as const,
+      year: 'numeric' as const
+    };
+    // Full format on larger screens
+    const desktopFormat = {
+      weekday: 'long' as const,
+      day: 'numeric' as const,
+      month: 'long' as const,
+      year: 'numeric' as const
+    };
+
+    return (
+      <span className="hidden sm:inline">
+        {dateObj.toLocaleDateString('en-GB', desktopFormat)}
+        <span className="sm:hidden">
+          {dateObj.toLocaleDateString('en-GB', mobileFormat)}
+        </span>
+      </span>
+    );
   };
 
   return (
     <Card 
-      className={`p-4 hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer' : ''}`}
+      className={`p-4 sm:p-6 hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer' : ''}`}
       onClick={handleClick}
     >
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="font-semibold text-lg">{show.name}</h3>
-          <div className="flex items-center text-sm text-muted-foreground mt-1">
-            <Calendar className="h-4 w-4 mr-2" />
-            <span>{formatDate(show.date)}</span>
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-4 mb-4">
+        <div className="w-full sm:w-auto">
+          <h3 className="font-semibold text-base sm:text-lg mb-1">{show.name}</h3>
+          <div className="flex items-center text-xs sm:text-sm text-muted-foreground mt-1">
+            <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+            {formatDate(show.date)}
           </div>
         </div>
-        <Badge className={getStatusColor(show.status)}>
+        <Badge 
+          className={`${getStatusColor(show.status)} text-xs sm:text-sm px-2 py-1`}
+        >
           {show.status}
         </Badge>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center text-sm text-muted-foreground">
-          <MapPin className="h-4 w-4 mr-2" />
-          <span>{show.location}</span>
+      <div className="space-y-3 sm:space-y-4">
+        <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+          <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
+          <span className="truncate">{show.location}</span>
         </div>
 
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Users className="h-4 w-4 mr-2" />
+        <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+          <Users className="h-4 w-4 mr-2 flex-shrink-0" />
           <span>Entries: {show.entryCount} / {show.maxEntries}</span>
         </div>
 
         {show.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-2">
             {show.description}
           </p>
         )}
       </div>
 
       {(onEdit || onDelete) && (
-        <div className="flex justify-end gap-2 mt-4">
+        <div className="flex justify-end gap-3 mt-4">
           {onEdit && (
             <Button
               variant="ghost"
               size="sm"
               onClick={handleEdit}
-              className="text-blue-600 hover:text-blue-800"
+              className="text-blue-600 hover:text-blue-800 p-3 sm:p-2"
             >
-              <Edit className="h-4 w-4" />
+              <Edit className="h-5 w-5 sm:h-4 sm:w-4" />
+              <span className="sr-only">Edit</span>
             </Button>
           )}
           {onDelete && (
@@ -101,9 +121,10 @@ export function ShowCard({ show, onEdit, onDelete, onClick }: ShowCardProps) {
               variant="ghost"
               size="sm"
               onClick={handleDelete}
-              className="text-red-600 hover:text-red-800"
+              className="text-red-600 hover:text-red-800 p-3 sm:p-2"
             >
-              <Trash className="h-4 w-4" />
+              <Trash className="h-5 w-5 sm:h-4 sm:w-4" />
+              <span className="sr-only">Delete</span>
             </Button>
           )}
         </div>
