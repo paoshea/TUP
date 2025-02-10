@@ -83,10 +83,10 @@ class AIService {
       Based on my analysis:
       
       Key Insights:
-      ${insights.map((insight: string) => `- ${insight}`).join('\n')}
+      ${insights.map(insight => `- ${insight}`).join('\n')}
       
       Recommendations:
-      ${recommendations.map((rec: string) => `- ${rec}`).join('\n')}
+      ${recommendations.map(rec => `- ${rec}`).join('\n')}
       
       Performance Prediction:
       Show Performance Score: ${predictions.showPerformance}/10
@@ -106,15 +106,15 @@ class AIService {
       Photo Analysis Results:
       
       Conformation (${conformation.score}/10):
-      ${conformation.issues.map((issue: string) => `- ${issue}`).join('\n')}
+      ${conformation.issues.map(issue => `- ${issue}`).join('\n')}
       
       Muscle Development (${muscleDevelopment.score}/10):
       Strengths:
-      ${muscleDevelopment.strengths.map((strength: string) => `- ${strength}`).join('\n')}
+      ${muscleDevelopment.strengths.map(strength => `- ${strength}`).join('\n')}
       
       Breed Characteristics (${breedCharacteristics.score}/10):
       Matching Traits:
-      ${breedCharacteristics.matching.map((trait: string) => `- ${trait}`).join('\n')}
+      ${breedCharacteristics.matching.map(trait => `- ${trait}`).join('\n')}
       
       Would you like specific recommendations for improvement?
     `;
@@ -132,10 +132,10 @@ class AIService {
       Readiness Level: ${readiness.score}/10
       
       Key Preparation Steps:
-      ${preparation.checklist.map((step: string) => `- ${step}`).join('\n')}
+      ${preparation.checklist.map(step => `- ${step}`).join('\n')}
       
       Strategy Recommendations:
-      ${strategy.recommendations.map((rec: string) => `- ${rec}`).join('\n')}
+      ${strategy.recommendations.map(rec => `- ${rec}`).join('\n')}
       
       Would you like to focus on any specific aspect of show preparation?
     `;

@@ -1,20 +1,3 @@
-interface OpenAIConfig {
-  apiKey: string;
-  model: string;
-  maxTokens: number;
-  temperature: number;
-}
-
-interface OpenAIResponse {
-  choices: Array<{
-    message: {
-      content: string;
-    };
-    index: number;
-    finish_reason: string;
-  }>;
-}
-
 export interface AIResponse {
   evaluation?: {
     insights: string[];
@@ -67,41 +50,16 @@ export interface AIResponse {
   };
 }
 
+interface ApiErrorResponse {
+  error: string;
+}
+
 export class OpenAIService {
   private static instance: OpenAIService;
-  private config: OpenAIConfig;
+  private readonly apiEndpoint = '/api/ai/analyze';
+  private readonly timeout = 30000; // 30 seconds
 
-  private readonly PROMPTS = {
-    evaluation: `You are an expert livestock evaluator. Analyze the following metrics and provide insights:
-      - Compare against breed standards
-      - Identify areas of improvement
-      - Suggest specific training exercises
-      - Predict show performance
-      Format response as JSON matching the AIResponse interface with evaluation data.`,
-    
-    photo: `You are an expert in livestock conformation. Analyze the following photo:
-      - Assess body structure and proportions
-      - Evaluate muscle development
-      - Check breed characteristics
-      - Suggest improvements
-      Format response as JSON matching the AIResponse interface with photo analysis data.`,
-    
-    show: `You are a show preparation expert. Review the following information:
-      - Assess readiness level
-      - Create preparation checklist
-      - Identify potential challenges
-      - Suggest winning strategies
-      Format response as JSON matching the AIResponse interface with show preparation data.`
-  };
-
-  private constructor() {
-    this.config = {
-      apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || '',
-      model: 'gpt-4',
-      maxTokens: 1000,
-      temperature: 0.7
-    };
-  }
+  private constructor() {}
 
   static getInstance(): OpenAIService {
     if (!this.instance) {
@@ -110,36 +68,69 @@ export class OpenAIService {
     return this.instance;
   }
 
-  async analyze(type: keyof typeof this.PROMPTS, data: unknown): Promise<AIResponse> {
-    try {
-      if (!this.config.apiKey) {
-        throw new Error('OpenAI API key not configured');
-      }
+  private async fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), this.timeout);
 
-      const prompt = this.PROMPTS[type];
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        cache: 'no-store',
         headers: {
-          'Authorization': `Bearer ${this.config.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: this.config.model,
-          messages: [
-            { role: 'system', content: prompt },
-            { role: 'user', content: JSON.stringify(data) }
-          ],
-          max_tokens: this.config.maxTokens,
-          temperature: this.config.temperature
-        })
+          ...options.headers,
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
+      clearTimeout(id);
+      return response;
+    } catch (error) {
+      clearTimeout(id);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timed out');
+      }
+      throw error;
+    }
+  }
+
+  async analyze(type: 'evaluation' | 'photo' | 'show', data: unknown): Promise<AIResponse> {
+    try {
+      const response = await this.fetchWithTimeout(
+        this.apiEndpoint,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            type,
+            data
+          })
+        }
+      );
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`OpenAI API error: ${error.message}`);
+        const errorText = await response.text();
+        let errorMessage = 'Failed to process request';
+        
+        try {
+          const errorData = JSON.parse(errorText) as ApiErrorResponse;
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          console.error('Error parsing error response:', e);
+        }
+        
+        throw new Error(`API Error (${response.status}): ${errorMessage}`);
       }
 
-      const result = await response.json() as OpenAIResponse;
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        throw new Error('Invalid response format from server');
+      }
+
+      const result = await response.json();
       return this.validateResponse(result);
     } catch (error) {
       console.error('OpenAI analysis failed:', error);
@@ -147,26 +138,23 @@ export class OpenAIService {
     }
   }
 
-  private validateResponse(response: OpenAIResponse): AIResponse {
-    try {
-      const content = response.choices[0].message.content;
-      const parsed = JSON.parse(content) as AIResponse;
-      
-      // Basic validation - ensure it has at least one of the expected top-level keys
-      if (!parsed.evaluation && !parsed.photo && !parsed.show) {
-        throw new Error('Invalid response format');
-      }
-
-      return parsed;
-    } catch (error) {
-      console.error('Response validation failed:', error);
-      throw error;
+  private validateResponse(response: unknown): AIResponse {
+    // Basic validation - ensure it has at least one of the expected top-level keys
+    if (typeof response !== 'object' || response === null) {
+      throw new Error('Invalid response format: not an object');
     }
+
+    const validResponse = response as AIResponse;
+    if (!validResponse.evaluation && !validResponse.photo && !validResponse.show) {
+      throw new Error('Invalid response format: missing required data');
+    }
+
+    return validResponse;
   }
 
-  private getFallbackResponse(type: keyof typeof this.PROMPTS): AIResponse {
+  private getFallbackResponse(type: 'evaluation' | 'photo' | 'show'): AIResponse {
     // Provide basic fallback responses when AI analysis fails
-    const fallbacks: Record<keyof typeof this.PROMPTS, AIResponse> = {
+    const fallbacks: Record<typeof type, AIResponse> = {
       evaluation: {
         evaluation: {
           insights: ['Unable to perform AI analysis'],

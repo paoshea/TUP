@@ -1,13 +1,5 @@
 // app/api/ai/chat/route.ts
 import { NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
-import type { AnthropicError } from '@anthropic-ai/sdk';
-
-// Initialize Anthropic client with proper configuration
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
-  baseURL: 'https://api.anthropic.com/v1'
-});
 
 console.log('[ChatAPI] Route module initialized');
 
@@ -17,7 +9,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-// Add OPTIONS handler for CORS preflight
 export async function OPTIONS(request: Request) {
   console.log('[ChatAPI] Handling OPTIONS request:', {
     url: request.url,
@@ -41,8 +32,7 @@ export async function POST(request: Request) {
     console.log('[ChatAPI] Environment check:', {
       hasApiKey: !!process.env.ANTHROPIC_API_KEY,
       apiKeyLength: process.env.ANTHROPIC_API_KEY?.length,
-      nodeEnv: process.env.NODE_ENV,
-      baseUrl: 'https://api.anthropic.com/v1'
+      nodeEnv: process.env.NODE_ENV
     });
     
     // Add request logging
@@ -84,13 +74,12 @@ export async function POST(request: Request) {
 
     console.log('[ChatAPI] Creating Anthropic message with message:', message);
 
-    // Create message with explicit error handling
     try {
       const requestParams = {
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-3-sonnet-20240229',
         max_tokens: 1024,
         temperature: 0.7,
-        messages: [{ role: 'user' as const, content: message }],
+        messages: [{ role: 'user', content: message }],
         system: `You are WizardPhil, an expert AI assistant specializing in North Country Cheviot sheep analysis.
           You have deep knowledge of breed standards, show preparation, performance evaluation, and breeding programs.
           Focus on providing specific, actionable insights related to:
@@ -112,18 +101,28 @@ export async function POST(request: Request) {
       console.log('[ChatAPI] Anthropic request parameters:', requestParams);
 
       console.time('[ChatAPI] Anthropic API call');
-      const response = await anthropic.messages.create(requestParams);
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify(requestParams)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Anthropic API error: ${errorText}`);
+      }
+
+      const anthropicResponse = await response.json();
       console.timeEnd('[ChatAPI] Anthropic API call');
 
-      console.log('[ChatAPI] Received response from Anthropic:', response);
+      console.log('[ChatAPI] Received response from Anthropic:', anthropicResponse);
 
       // Process response content
-      const content = response.content.reduce((acc, block) => {
-        if ('text' in block) {
-          return acc + block.text;
-        }
-        return acc;
-      }, '');
+      const content = anthropicResponse.content[0].text;
 
       console.log('[ChatAPI] Processed content:', content);
 
@@ -197,24 +196,23 @@ export async function POST(request: Request) {
       });
 
     } catch (error) {
-      const anthropicError = error as AnthropicError;
-      console.error('[ChatAPI] Anthropic API error:', anthropicError);
-      console.error('[ChatAPI] Anthropic error details:', {
-        name: anthropicError.name,
-        message: anthropicError.message,
-        stack: anthropicError.stack,
+      console.error('[ChatAPI] API error:', error);
+      console.error('[ChatAPI] Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
         requestTime: Date.now() - requestStartTime
       });
       
-      // Handle specific Anthropic error types
-      if (anthropicError instanceof Error) {
-        if (anthropicError.message.includes('rate limit')) {
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.message.includes('rate limit')) {
           return NextResponse.json(
             { error: 'Service is currently busy. Please try again in a moment.' },
             { status: 429, headers: corsHeaders }
           );
         }
-        if (anthropicError.message.includes('invalid_request_error')) {
+        if (error.message.includes('invalid_request_error')) {
           return NextResponse.json(
             { error: 'Invalid request parameters' },
             { status: 400, headers: corsHeaders }
@@ -222,7 +220,7 @@ export async function POST(request: Request) {
         }
       }
       
-      throw anthropicError; // Re-throw for general error handling
+      throw error; // Re-throw for general error handling
     }
 
   } catch (error) {
