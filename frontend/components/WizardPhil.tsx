@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { anthropicService, type AnthropicResponse } from '@/services/anthropic.service';
+import logger from '@/lib/logger';
 
 interface Message {
   id: string;
@@ -19,7 +20,7 @@ interface WizardPhilProps {
 }
 
 export function WizardPhil({ isOpen = false, onOpenChange }: WizardPhilProps): React.ReactElement {
-  console.log('[WizardPhil] Component rendering with isOpen:', isOpen);
+  logger.log('[WizardPhil] Component rendering with isOpen:', isOpen);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -34,26 +35,31 @@ export function WizardPhil({ isOpen = false, onOpenChange }: WizardPhilProps): R
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('[WizardPhil] Component mounted/updated:', {
+    logger.log('[WizardPhil] Component mounted/updated:', {
       isOpen,
       messageCount: messages.length,
       hasError: !!error,
-      isAnalyzing
+      isAnalyzing,
+      currentInput: input
     });
-  }, [isOpen, messages.length, error, isAnalyzing]);
+  }, [isOpen, messages.length, error, isAnalyzing, input]);
 
   useEffect(() => {
     if (error) {
-      console.log('[WizardPhil] Clearing error on input change');
+      logger.log('[WizardPhil] Clearing error on input change');
       setError(null);
     }
   }, [input]);
 
   const handleSend = useCallback(async (): Promise<void> => {
-    if (!input.trim()) return;
+    if (!input.trim()) {
+      logger.log('[WizardPhil] Empty input, skipping send');
+      return;
+    }
 
     try {
-      console.log('[WizardPhil] Starting message send:', {
+      logger.log('\n[WizardPhil] ========== Message Send Start ==========');
+      logger.log('[WizardPhil] Starting message send:', {
         input: input.trim(),
         timestamp: new Date().toISOString(),
         messageCount: messages.length
@@ -66,16 +72,18 @@ export function WizardPhil({ isOpen = false, onOpenChange }: WizardPhilProps): R
         timestamp: new Date(),
       };
 
-      console.log('[WizardPhil] Adding user message:', userMessage);
+      logger.log('[WizardPhil] Adding user message:', userMessage);
       setMessages(prev => [...prev, userMessage]);
       setInput('');
       setIsAnalyzing(true);
       setError(null);
 
-      console.log('[WizardPhil] Calling anthropicService.processMessage');
+      logger.log('[WizardPhil] Calling anthropicService.processMessage');
       try {
+        console.time('[WizardPhil] API request duration');
         const aiResponse = await anthropicService.processMessage(input);
-        console.log('[WizardPhil] Received AI response:', aiResponse);
+        console.timeEnd('[WizardPhil] API request duration');
+        logger.log('[WizardPhil] Received AI response:', aiResponse);
 
         const newMessage: Message = {
           id: Date.now().toString(),
@@ -86,10 +94,10 @@ export function WizardPhil({ isOpen = false, onOpenChange }: WizardPhilProps): R
           relatedTopics: aiResponse.relatedTopics,
         };
 
-        console.log('[WizardPhil] Adding response message:', newMessage);
+        logger.log('[WizardPhil] Adding response message:', newMessage);
         setMessages(prev => [...prev, newMessage]);
       } catch (apiError) {
-        console.error('[WizardPhil] API error:', {
+        logger.error('[WizardPhil] API error:', {
           name: apiError instanceof Error ? apiError.name : 'Unknown',
           message: apiError instanceof Error ? apiError.message : 'Unknown error',
           stack: apiError instanceof Error ? apiError.stack : undefined
@@ -97,7 +105,7 @@ export function WizardPhil({ isOpen = false, onOpenChange }: WizardPhilProps): R
         throw apiError;
       }
     } catch (error) {
-      console.error('[WizardPhil] Error in handleSend:', {
+      logger.error('[WizardPhil] Error in handleSend:', {
         name: error instanceof Error ? error.name : 'Unknown',
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
@@ -113,35 +121,43 @@ export function WizardPhil({ isOpen = false, onOpenChange }: WizardPhilProps): R
         error: true
       };
 
-      console.log('[WizardPhil] Adding error message:', errorResponse);
+      logger.log('[WizardPhil] Adding error message:', errorResponse);
       setMessages(prev => [...prev, errorResponse]);
     } finally {
-      console.log('[WizardPhil] Message processing completed');
+      logger.log('[WizardPhil] Message processing completed');
+      logger.log('[WizardPhil] ========== Message Send End ==========\n');
       setIsAnalyzing(false);
     }
   }, [input, messages.length]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[WizardPhil] Form submitted with input:', input);
+    logger.log('\n[WizardPhil] ========== Form Submit Start ==========');
+    logger.log('[WizardPhil] Form submitted with input:', {
+      value: input,
+      length: input.length,
+      timestamp: new Date().toISOString()
+    });
     void handleSend();
+    logger.log('[WizardPhil] ========== Form Submit End ==========\n');
   }, [handleSend, input]);
 
   const handleClose = useCallback(() => {
-    console.log('[WizardPhil] Close button clicked');
+    logger.log('[WizardPhil] Close button clicked');
     onOpenChange?.(false);
   }, [onOpenChange]);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('[WizardPhil] Input changed:', {
+    logger.log('[WizardPhil] Input changed:', {
       value: e.target.value,
-      length: e.target.value.length
+      length: e.target.value.length,
+      timestamp: new Date().toISOString()
     });
     setInput(e.target.value);
   }, []);
 
   if (!isOpen) {
-    console.log('[WizardPhil] Component not rendering (isOpen: false)');
+    logger.log('[WizardPhil] Component not rendering (isOpen: false)');
     return <></>;
   }
 

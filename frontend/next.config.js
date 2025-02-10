@@ -23,6 +23,17 @@ const nextConfig = {
       }
     ];
   },
+  // Enable detailed logging for API routes
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
+  },
+  onDemandEntries: {
+    // Enable page bundle tracing
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
+  },
 };
 
 module.exports = nextConfig;

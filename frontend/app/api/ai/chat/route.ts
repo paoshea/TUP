@@ -9,6 +9,8 @@ const anthropic = new Anthropic({
   baseURL: 'https://api.anthropic.com/v1'
 });
 
+console.log('[ChatAPI] Route module initialized');
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -16,11 +18,24 @@ const corsHeaders = {
 };
 
 // Add OPTIONS handler for CORS preflight
-export async function OPTIONS() {
+export async function OPTIONS(request: Request) {
+  console.log('[ChatAPI] Handling OPTIONS request:', {
+    url: request.url,
+    method: request.method,
+    headers: Object.fromEntries(request.headers.entries())
+  });
   return NextResponse.json({}, { headers: corsHeaders });
 }
 
 export async function POST(request: Request) {
+  const requestStartTime = Date.now();
+  console.log('\n[ChatAPI] ========== Request Start ==========');
+  console.log('[ChatAPI] Received POST request:', {
+    url: request.url,
+    method: request.method,
+    timestamp: new Date().toISOString()
+  });
+
   try {
     // Add environment debugging
     console.log('[ChatAPI] Environment check:', {
@@ -31,10 +46,12 @@ export async function POST(request: Request) {
     });
     
     // Add request logging
-    console.log('[ChatAPI] Processing request at:', new Date().toISOString());
-    console.log('[ChatAPI] Request URL:', request.url);
-    console.log('[ChatAPI] Request method:', request.method);
-    console.log('[ChatAPI] Request headers:', Object.fromEntries(request.headers.entries()));
+    console.log('[ChatAPI] Request headers:', {
+      ...Object.fromEntries(request.headers.entries()),
+      origin: request.headers.get('origin'),
+      referer: request.headers.get('referer'),
+      host: request.headers.get('host')
+    });
     
     if (!process.env.ANTHROPIC_API_KEY) {
       console.error('[ChatAPI] Missing Anthropic API key');
@@ -94,7 +111,9 @@ export async function POST(request: Request) {
 
       console.log('[ChatAPI] Anthropic request parameters:', requestParams);
 
+      console.time('[ChatAPI] Anthropic API call');
       const response = await anthropic.messages.create(requestParams);
+      console.timeEnd('[ChatAPI] Anthropic API call');
 
       console.log('[ChatAPI] Received response from Anthropic:', response);
 
@@ -164,11 +183,16 @@ export async function POST(request: Request) {
 
       console.log('[ChatAPI] Final response data:', responseData);
 
+      const response_time = Date.now() - requestStartTime;
+      console.log('[ChatAPI] Request completed in:', response_time, 'ms');
+      console.log('[ChatAPI] ========== Request End ==========\n');
+
       return NextResponse.json(responseData, { 
         headers: {
           ...corsHeaders,
           'Cache-Control': 'no-store, no-cache, must-revalidate',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'X-Response-Time': response_time.toString()
         }
       });
 
@@ -178,7 +202,8 @@ export async function POST(request: Request) {
       console.error('[ChatAPI] Anthropic error details:', {
         name: anthropicError.name,
         message: anthropicError.message,
-        stack: anthropicError.stack
+        stack: anthropicError.stack,
+        requestTime: Date.now() - requestStartTime
       });
       
       // Handle specific Anthropic error types
@@ -206,10 +231,12 @@ export async function POST(request: Request) {
     console.error('[ChatAPI] Error details:', {
       name: err.name,
       message: err.message,
-      stack: err.stack
+      stack: err.stack,
+      requestTime: Date.now() - requestStartTime
     });
     const errorMessage = err instanceof Error ? err.message : 'Failed to process message';
     console.error('[ChatAPI] Error message:', errorMessage);
+    console.log('[ChatAPI] ========== Request End (Error) ==========\n');
     
     return NextResponse.json(
       { error: errorMessage },
