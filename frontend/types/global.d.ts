@@ -1,33 +1,20 @@
-interface Window {
-  webkitSpeechRecognition: typeof webkitSpeechRecognition;
+declare module '@/lib/utils' {
+  import { type ClassValue } from 'clsx';
+  export function cn(...inputs: ClassValue[]): string;
 }
 
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
+declare module '@/components/ui/*' {
+  export * from '../components/ui/*';
 }
 
-interface SpeechRecognitionEvent extends Event {
-  results: {
-    item(index: number): {
-      item(index: number): {
-        transcript: string;
-      };
-    };
-    length: number;
-  };
+declare module '@/services/*' {
+  export * from '../services/*';
 }
 
-declare class webkitSpeechRecognition {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
+declare module '@/hooks/*' {
+  export * from '../hooks/*';
+}
 
-  onstart: () => void;
-  onend: () => void;
-  onerror: (event: SpeechRecognitionErrorEvent) => void;
-  onresult: (event: SpeechRecognitionEvent) => void;
-
-  start(): void;
-  stop(): void;
-  abort(): void;
+declare module '@/components/*' {
+  export * from '../components/*';
 }

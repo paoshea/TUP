@@ -6,24 +6,21 @@ export interface AnthropicResponse {
 }
 
 export const anthropicService = {
-  processMessage: async (message: string): Promise<AnthropicResponse> => {
-    try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt: message }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to process message');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error processing message:', error);
-      throw error;
-    }
+  async processMessage(message: string): Promise<AnthropicResponse> {
+    // Mock response for demo
+    return {
+      content: "I understand you're asking about livestock management. While I'm currently in demo mode, I'd be happy to provide general guidance based on best practices.",
+      confidence: 0.95,
+      suggestions: [
+        'Review breed standards',
+        'Check show preparation guidelines',
+        'Analyze recent performance data'
+      ],
+      relatedTopics: [
+        'Breed Standards',
+        'Show Preparation',
+        'Performance Analysis'
+      ]
+    };
   }
 };

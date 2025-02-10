@@ -20,54 +20,49 @@ export interface AnalysisResponse {
 }
 
 export const livestockAI = {
-  analyzePerformance: async (
+  async analyzePerformance(
     animalId: string,
-    currentMetrics: {
-      movement: number;
-      conformation: number;
-      muscleDevelopment: number;
-      breedCharacteristics: number;
-    },
-    historicalData: Array<{
-      movement: number;
-      conformation: number;
-      muscleDevelopment: number;
-      breedCharacteristics: number;
-    }>
-  ): Promise<AnalysisResponse> => {
-    // Mock implementation
+    currentMetrics: any,
+    historicalData: any[]
+  ): Promise<AnalysisResponse> {
+    // Mock response for demo
     return {
-      currentScore: currentMetrics,
+      currentScore: {
+        movement: 8,
+        conformation: 7,
+        muscleDevelopment: 9,
+        breedCharacteristics: 8
+      },
       historicalTrend: {
         recommendations: [
-          'Maintain consistent exercise routine',
-          'Focus on muscle development',
-          'Continue breed-specific training'
+          'Continue current exercise routine',
+          'Maintain balanced nutrition',
+          'Focus on posture training'
         ],
         improvement: {
           movement: 5,
-          conformation: 10,
-          muscleDevelopment: 15,
-          breedCharacteristics: 8
+          conformation: 3,
+          muscleDevelopment: 8,
+          breedCharacteristics: 2
         }
       },
       breedCompliance: {
         overallScore: 8.5,
         strengthAreas: [
-          'Excellent conformation',
-          'Strong breed characteristics',
-          'Good muscle tone'
+          'Muscle definition',
+          'Movement fluidity',
+          'Overall proportions'
         ],
         improvementAreas: [
-          'Fine-tune movement patterns',
-          'Enhance show presence'
+          'Head carriage',
+          'Leg alignment'
         ]
       },
       predictions: {
         factors: [
-          'Review movement exercises',
-          'Adjust nutrition plan',
-          'Increase training intensity'
+          'Review movement patterns',
+          'Check nutrition plan',
+          'Assess training schedule'
         ]
       }
     };

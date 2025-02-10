@@ -1,5 +1,11 @@
 # Getting Started Guide for macOS
 
+# catch errors
+- To catch all build errors at once, we should first clean the Next.js build cache and then run the build with additional flags to show all errors. Let me create a command that combines these steps.
+cd frontend && rm -rf .next && NEXT_TELEMETRY_DISABLED=1 npm run build -- --no-lint && cd ..
+- using Next.js's experimental flag to catch all build errors at once and output them in a more readable format.
+cd frontend && rm -rf .next && NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS='--trace-warnings' npm run build -- --debug && cd ..
+
 ## Quick Start
 ```bash
 -  To build and restarted the application, 

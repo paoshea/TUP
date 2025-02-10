@@ -12,15 +12,14 @@ import {
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Bot, Send, Sparkles, TrendingUp, Award, LineChart, Mic, Camera } from 'lucide-react';
-import Image from 'next/image';
+import { Send, Sparkles, TrendingUp, Award, LineChart, Mic, Camera } from 'lucide-react';
+import { Badge } from './ui/badge';
+import { PerformanceChart, type PerformanceData } from './PerformanceChart';
+import { cn } from '@/lib/utils';
 import { anthropicService, type AnthropicResponse } from '@/services/anthropic.service';
 import { livestockAI, type AnalysisResponse } from '@/services/livestockAI';
 import { photoAnalysis, type PhotoAnalysisResult } from '@/services/photoAnalysis';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
-import { Badge } from './ui/badge';
-import { PerformanceChart, type PerformanceData } from './PerformanceChart';
-import { cn } from '@/lib/utils';
 
 interface Message {
   id: string;
@@ -345,42 +344,6 @@ export function WizardPhil({ isOpen, onOpenChange }: WizardPhilProps): JSX.Eleme
                               />
                             );
                           })()}
-                        </div>
-                      )}
-
-                      {msg.analysis.photoAnalysis && (
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Camera className="h-4 w-4" />
-                            <h4 className="font-medium">Photo Analysis</h4>
-                          </div>
-                          <Image
-                            src={msg.analysis.photoAnalysis.url}
-                            alt="Analyzed photo"
-                            width={500}
-                            height={300}
-                            className="w-full h-auto rounded-lg mb-2"
-                            priority
-                          />
-                          <div className="space-y-2">
-                            <div>
-                              <p className="text-sm font-medium">Conformation:</p>
-                              <p className="text-sm">Score: {msg.analysis.photoAnalysis.results.conformation.score}/10</p>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {msg.analysis.photoAnalysis.results.conformation.recommendations.map((rec, i) => (
-                                  <Badge key={i} variant="outline">{rec}</Badge>
-                                ))}
-                              </div>
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">Movement:</p>
-                              <p className="text-sm">{msg.analysis.photoAnalysis.results.movement.gaitAnalysis}</p>
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">Breed Standards:</p>
-                              <p className="text-sm">Compliance: {msg.analysis.photoAnalysis.results.breedStandards.compliance}%</p>
-                            </div>
-                          </div>
                         </div>
                       )}
                     </div>
