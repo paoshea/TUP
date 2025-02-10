@@ -21,6 +21,7 @@
     "test:backend": "npm run test --workspace=backend"
   },
   "dependencies": {
+    "@netlify/plugin-nextjs": "^5.9.4",
     "@types/recharts": "^1.8.29",
     "recharts": "^2.15.1"
   }

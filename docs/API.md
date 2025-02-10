@@ -228,6 +228,38 @@ DEEPSEEK_API_KEY=your_key
 # The .env file should only contain public variables or examples
 ```
 
+## Deployment
+
+The API routes can be configured for different deployment platforms while maintaining the same core functionality. These configurations are deployment-specific and can be easily switched between platforms.
+
+### Netlify Configuration
+
+For Netlify deployment, add the Edge runtime configuration to your API routes:
+
+```typescript
+// app/api/ai/chat/route.ts
+export const runtime = "edge";
+
+// Rest of the route implementation remains the same
+```
+
+### Other Platforms
+
+For platforms that don't require specific runtime configurations (e.g., Replit):
+
+```typescript
+// app/api/ai/chat/route.ts
+// Remove or comment out the edge runtime config
+// export const runtime = "edge";
+
+// Route implementation remains unchanged
+```
+
+The core API route code stays the same regardless of the deployment platform. This approach allows for:
+- Easy switching between deployment platforms
+- Platform-specific optimizations when needed
+- Consistent behavior across different environments
+
 ## Best Practices
 
 1. **Error Handling**

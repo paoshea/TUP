@@ -1,3 +1,7 @@
+
+// for Netifly deployment
+export const runtime = "edge";
+
 // app/api/ai/chat/route.ts
 import { NextResponse } from 'next/server';
 
