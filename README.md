@@ -16,6 +16,9 @@ TUP is a comprehensive livestock evaluation and tracking platform designed speci
 - Photo integration and management
 - Custom checklist creation
 - Progress tracking and reporting
+- WizardPhil AI Assistant with voice interaction
+- Learning centre with farming terminology
+- Code analysis and generation tools
 
 ### Key Components
 - **Historical Flocks Database**: Detailed records of renowned flocks including achievements and notable traits
@@ -27,6 +30,17 @@ TUP is a comprehensive livestock evaluation and tracking platform designed speci
   - Comparative analytics
   - Progress tracking
   - Performance visualization
+  - Code analysis and insights
+- **AI Assistant (WizardPhil)**:
+  - Voice input/output capabilities
+  - Natural language processing
+  - Context-aware responses
+  - Learning centre integration
+- **Knowledge Base**:
+  - Comprehensive farming terminology
+  - TUP-specific glossary
+  - Best practices documentation
+  - Show preparation guides
 
 ## 🛠 Tech Stack
 
@@ -38,6 +52,7 @@ TUP is a comprehensive livestock evaluation and tracking platform designed speci
 - Lucide React for icons
 - React Query
 - Recharts for data visualization
+- Web Speech API for voice features
 
 ### Backend
 - Node.js
@@ -46,6 +61,7 @@ TUP is a comprehensive livestock evaluation and tracking platform designed speci
 - Prisma ORM
 - Redis for caching
 - AWS S3 for image storage
+- AI/ML processing pipeline
 
 ### Mobile
 - React Native
@@ -62,6 +78,7 @@ TUP is a comprehensive livestock evaluation and tracking platform designed speci
 - Modern web browser (Chrome, Firefox, Safari, Edge)
 - JavaScript enabled
 - Minimum 1024x768 screen resolution
+- Microphone access for voice features
 
 ## 🚀 Getting Started
 
@@ -111,6 +128,9 @@ Detailed documentation is available in the following sections:
 - [Database Schema](docs/SCHEMA.md)
 - [Contributing Guide](CONTRIBUTING.md)
 - [Mobile App Setup](docs/MOBILE_SETUP.md)
+- [WizardPhil Guide](docs/WIZARDPHIL.md)
+- [Learning Centre](docs/LEARNING_CENTRE.md)
+- [Code Tools Guide](docs/CODE_TOOLS.md)
 
 ## 🗄️ Project Structure
 ```
@@ -152,5 +172,3 @@ For support and queries:
 - Email Support: support@tup-assistant.com
 
 Built with ❤️ for the livestock community
-
-
