@@ -14,3 +14,7 @@ deploymentTarget = "cloud"
 [languages.typescript]
 pattern = "**/{*.ts,*.js,*.tsx,*.jsx}"
 syntax = "typescript"
+
+[[ports]]
+localPort = 3000
+externalPort = 80
