@@ -1,5 +1,161 @@
 # WizardPhil AI Assistant
 
+## Latest troubleshoot
+- Looking at both logs, I can identify several issues:
+
+- Frontend/Backend Parameter Mismatch:
+typescript
+// Frontend sends
+const body = JSON.stringify({ message: 'hi' })
+
+// But API route expects
+const { prompt } = body;  // This means 'message' is undefined
+
+- Incorrect Model Name:
+typescript
+model: 'claude-3-5-sonnet-20241022'  // incorrect format
+Should be:
+typescript
+model: 'claude-3-sonnet-20240229'  // correct format for current Claude 3
+
+Let's fix these issues:
+// app/api/ai/chat/route.ts
+import { NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
+
+// Initialize Anthropic client
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY || '',
+  baseURL: 'https://api.anthropic.com/v1'
+});
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
+export async function POST(request: Request) {
+  try {
+    console.log('[ChatAPI] Processing request at:', new Date().toISOString());
+
+    // Check API key
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('[ChatAPI] Missing Anthropic API key');
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500, headers: corsHeaders }
+      );
+    }
+
+    const body = await request.json();
+    console.log('[ChatAPI] Request body:', body);
+
+    // Accept either message or prompt
+    const userInput = body.message || body.prompt;
+
+    if (!userInput) {
+      console.error('[ChatAPI] Missing message/prompt in request body');
+      return NextResponse.json(
+        { error: 'Missing message in request body' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    console.log('[ChatAPI] Creating Anthropic message with input:', userInput);
+
+    const response = await anthropic.messages.create({
+      model: 'claude-3-sonnet-20240229',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: userInput }],
+      system: `You are WizardPhil, an expert AI assistant specializing in North Country Cheviot sheep analysis.
+        You have deep knowledge of breed standards, show preparation, performance evaluation, and breeding programs.
+        Focus on providing specific, actionable insights related to:
+        - Physical characteristics assessment
+        - Show preparation guidance
+        - Performance metrics analysis
+        - Breeding program recommendations
+        Always maintain a professional yet approachable tone.
+        After each response, provide:
+        1. 3-4 relevant follow-up suggestions based on the context
+        2. 2-3 related topics that would be valuable to explore
+        Format these as JSON arrays at the end of your response like this:
+        [SUGGESTIONS]
+        ["suggestion 1", "suggestion 2", "suggestion 3"]
+        [TOPICS]
+        ["topic 1", "topic 2", "topic 3"]`
+    });
+
+    console.log('[ChatAPI] Received response from Anthropic');
+
+    const content = response.content.reduce((acc, block) => {
+      if ('text' in block) {
+        return acc + block.text;
+      }
+      return acc;
+    }, '');
+
+    const suggestionsMatch = content.match(/\[SUGGESTIONS\][^\[]*\[([\s\S]*?)\]/);
+    const topicsMatch = content.match(/\[TOPICS\][^\[]*\[([\s\S]*?)\]/);
+
+    let suggestions = [];
+    let topics = [];
+
+    try {
+      if (suggestionsMatch?.[1]) {
+        suggestions = JSON.parse(`[${suggestionsMatch[1]}]`);
+      }
+      if (topicsMatch?.[1]) {
+        topics = JSON.parse(`[${topicsMatch[1]}]`);
+      }
+    } catch (e) {
+      console.error('[ChatAPI] Error parsing suggestions/topics:', e);
+      suggestions = ['Review breed standards', 'Check show preparation', 'Analyze performance'];
+      topics = ['Breed Standards', 'Show Preparation', 'Performance'];
+    }
+
+    const cleanContent = content
+      .replace(/\[SUGGESTIONS\][\s\S]*?\](\r?\n|\r)?/g, '')
+      .replace(/\[TOPICS\][\s\S]*?\](\r?\n|\r)?/g, '')
+      .trim();
+
+    return NextResponse.json({
+      content: cleanContent,
+      confidence: 0.95,
+      suggestions,
+      relatedTopics: topics
+    }, { headers: corsHeaders });
+
+  } catch (error) {
+    console.error('[ChatAPI] Error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to process message' },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+}
+
+# Key changes made:
+Updated model name to claude-3-sonnet-20240229
+Added support for both message and prompt in request body
+Simplified error handling
+Improved logging
+Added proper CORS headers
+
+# After making these changes:
+Make sure your .env file has the correct API key
+Restart your Next.js server
+Clear your browser cache
+Test with a simple message using curl:
+bash
+curl -X POST http://localhost:3000/api/ai/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"hi"}'
+
 ## Current Capabilities
 
 ### 1. User Interface [Implemented]
