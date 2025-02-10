@@ -1,74 +1,219 @@
+// app/api/ai/chat/route.ts
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import type { AnthropicError } from '@anthropic-ai/sdk';
 
-// Use server-side environment variable
-const apiKey = process.env.ANTHROPIC_API_KEY || process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY || '';
-
+// Initialize Anthropic client with proper configuration
 const anthropic = new Anthropic({
-  apiKey,
-  dangerouslyAllowBrowser: true // Only needed if we're using it client-side
+  apiKey: process.env.ANTHROPIC_API_KEY || '',
+  baseURL: 'https://api.anthropic.com/v1'
 });
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Add OPTIONS handler for CORS preflight
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function POST(request: Request) {
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'API key not configured' },
-      { status: 500 }
-    );
-  }
-
   try {
-    const { message } = await request.json();
-
-    const response = await anthropic.messages.create({
-      model: 'claude-3-opus-20240229',
-      max_tokens: 1024,
-      messages: [{
-        role: 'user',
-        content: message
-      }],
-      system: `You are WizardPhil, an expert AI assistant specializing in North Country Cheviot sheep analysis. 
-              You have deep knowledge of breed standards, show preparation, performance evaluation, and breeding programs.
-              Focus on providing specific, actionable insights related to:
-              - Physical characteristics assessment
-              - Show preparation guidance
-              - Performance metrics analysis
-              - Breeding program recommendations
-              Always maintain a professional yet approachable tone.`
+    // Add environment debugging
+    console.log('[ChatAPI] Environment check:', {
+      hasApiKey: !!process.env.ANTHROPIC_API_KEY,
+      apiKeyLength: process.env.ANTHROPIC_API_KEY?.length,
+      nodeEnv: process.env.NODE_ENV,
+      baseUrl: 'https://api.anthropic.com/v1'
     });
+    
+    // Add request logging
+    console.log('[ChatAPI] Processing request at:', new Date().toISOString());
+    console.log('[ChatAPI] Request URL:', request.url);
+    console.log('[ChatAPI] Request method:', request.method);
+    console.log('[ChatAPI] Request headers:', Object.fromEntries(request.headers.entries()));
+    
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('[ChatAPI] Missing Anthropic API key');
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500, headers: corsHeaders }
+      );
+    }
 
-    // Handle different types of content blocks
-    const content = response.content.reduce((acc, block) => {
-      if ('text' in block) {
-        return acc + block.text;
+    const body = await request.json();
+    console.log('[ChatAPI] Request body:', body);
+    
+    const { message } = body;
+
+    if (!message) {
+      console.error('[ChatAPI] Missing message in request body');
+      return NextResponse.json(
+        { error: 'Missing message in request body' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    if (typeof message !== 'string') {
+      console.error('[ChatAPI] Invalid message type:', typeof message);
+      return NextResponse.json(
+        { error: 'Message must be a string' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    console.log('[ChatAPI] Creating Anthropic message with message:', message);
+
+    // Create message with explicit error handling
+    try {
+      const requestParams = {
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 1024,
+        temperature: 0.7,
+        messages: [{ role: 'user' as const, content: message }],
+        system: `You are WizardPhil, an expert AI assistant specializing in North Country Cheviot sheep analysis.
+          You have deep knowledge of breed standards, show preparation, performance evaluation, and breeding programs.
+          Focus on providing specific, actionable insights related to:
+          - Physical characteristics assessment
+          - Show preparation guidance
+          - Performance metrics analysis
+          - Breeding program recommendations
+          Always maintain a professional yet approachable tone.
+          After each response, provide:
+          1. 3-4 relevant follow-up suggestions based on the context
+          2. 2-3 related topics that would be valuable to explore
+          Format these as JSON arrays at the end of your response like this:
+          [SUGGESTIONS]
+          ["suggestion 1", "suggestion 2", "suggestion 3"]
+          [TOPICS]
+          ["topic 1", "topic 2", "topic 3"]`
+      };
+
+      console.log('[ChatAPI] Anthropic request parameters:', requestParams);
+
+      const response = await anthropic.messages.create(requestParams);
+
+      console.log('[ChatAPI] Received response from Anthropic:', response);
+
+      // Process response content
+      const content = response.content.reduce((acc, block) => {
+        if ('text' in block) {
+          return acc + block.text;
+        }
+        return acc;
+      }, '');
+
+      console.log('[ChatAPI] Processed content:', content);
+
+      // Parse suggestions and topics with improved error handling
+      const suggestionsRegex = /\[SUGGESTIONS\][^\[]*\[([\s\S]*?)\]/;
+      const topicsRegex = /\[TOPICS\][^\[]*\[([\s\S]*?)\]/;
+
+      const suggestionsMatch = content.match(suggestionsRegex);
+      const topicsMatch = content.match(topicsRegex);
+
+      console.log('[ChatAPI] Suggestions match:', suggestionsMatch);
+      console.log('[ChatAPI] Topics match:', topicsMatch);
+
+      let suggestions: string[] = [];
+      let topics: string[] = [];
+
+      try {
+        if (suggestionsMatch?.[1]) {
+          const suggestionsStr = suggestionsMatch[1].trim();
+          suggestions = JSON.parse(`[${suggestionsStr}]`);
+          // Validate suggestions array
+          if (!Array.isArray(suggestions) || !suggestions.every(item => typeof item === 'string')) {
+            throw new Error('Invalid suggestions format');
+          }
+        }
+        if (topicsMatch?.[1]) {
+          const topicsStr = topicsMatch[1].trim();
+          topics = JSON.parse(`[${topicsStr}]`);
+          // Validate topics array
+          if (!Array.isArray(topics) || !topics.every(item => typeof item === 'string')) {
+            throw new Error('Invalid topics format');
+          }
+        }
+      } catch (e) {
+        console.error('[ChatAPI] Error parsing suggestions/topics:', e);
+        suggestions = ['Review breed standards', 'Check show preparation', 'Analyze performance'];
+        topics = ['Breed Standards', 'Show Preparation', 'Performance'];
       }
-      return acc;
-    }, '');
 
-    // Extract suggestions and topics based on the content
-    const suggestions = [
-      'Review breed standards',
-      'Check show preparation guidelines',
-      'Analyze recent performance data'
-    ];
+      // Clean content
+      const cleanContent = content
+        .replace(/\[SUGGESTIONS\][\s\S]*?\](\r?\n|\r)?/g, '')
+        .replace(/\[TOPICS\][\s\S]*?\](\r?\n|\r)?/g, '')
+        .trim();
 
-    const topics = [
-      'Breed Standards',
-      'Show Preparation',
-      'Performance Analysis'
-    ];
+      // Validate cleaned content
+      if (!cleanContent) {
+        throw new Error('Empty response content after cleaning');
+      }
 
-    return NextResponse.json({
-      content,
-      confidence: 0.95,
-      suggestions,
-      relatedTopics: topics
-    });
+      const responseData = {
+        content: cleanContent,
+        confidence: 0.95,
+        suggestions: suggestions.slice(0, 4), // Limit to 4 suggestions
+        relatedTopics: topics.slice(0, 3)     // Limit to 3 topics
+      };
+
+      console.log('[ChatAPI] Final response data:', responseData);
+
+      return NextResponse.json(responseData, { 
+        headers: {
+          ...corsHeaders,
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Content-Type': 'application/json'
+        }
+      });
+
+    } catch (error) {
+      const anthropicError = error as AnthropicError;
+      console.error('[ChatAPI] Anthropic API error:', anthropicError);
+      console.error('[ChatAPI] Anthropic error details:', {
+        name: anthropicError.name,
+        message: anthropicError.message,
+        stack: anthropicError.stack
+      });
+      
+      // Handle specific Anthropic error types
+      if (anthropicError instanceof Error) {
+        if (anthropicError.message.includes('rate limit')) {
+          return NextResponse.json(
+            { error: 'Service is currently busy. Please try again in a moment.' },
+            { status: 429, headers: corsHeaders }
+          );
+        }
+        if (anthropicError.message.includes('invalid_request_error')) {
+          return NextResponse.json(
+            { error: 'Invalid request parameters' },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+      }
+      
+      throw anthropicError; // Re-throw for general error handling
+    }
+
   } catch (error) {
-    console.error('Error processing message:', error);
+    const err = error as Error;
+    console.error('[ChatAPI] Error:', err);
+    console.error('[ChatAPI] Error details:', {
+      name: err.name,
+      message: err.message,
+      stack: err.stack
+    });
+    const errorMessage = err instanceof Error ? err.message : 'Failed to process message';
+    console.error('[ChatAPI] Error message:', errorMessage);
+    
     return NextResponse.json(
-      { error: 'Failed to process message' },
-      { status: 500 }
+      { error: errorMessage },
+      { status: 500, headers: corsHeaders }
     );
   }
 }

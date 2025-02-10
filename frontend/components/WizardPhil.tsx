@@ -19,6 +19,8 @@ interface WizardPhilProps {
 }
 
 export function WizardPhil({ isOpen = false, onOpenChange }: WizardPhilProps): React.ReactElement {
+  console.log('[WizardPhil] Component rendering with isOpen:', isOpen);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -32,7 +34,19 @@ export function WizardPhil({ isOpen = false, onOpenChange }: WizardPhilProps): R
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (error) setError(null);
+    console.log('[WizardPhil] Component mounted/updated:', {
+      isOpen,
+      messageCount: messages.length,
+      hasError: !!error,
+      isAnalyzing
+    });
+  }, [isOpen, messages.length, error, isAnalyzing]);
+
+  useEffect(() => {
+    if (error) {
+      console.log('[WizardPhil] Clearing error on input change');
+      setError(null);
+    }
   }, [input]);
 
   const handleSend = useCallback(async (): Promise<void> => {
@@ -41,7 +55,8 @@ export function WizardPhil({ isOpen = false, onOpenChange }: WizardPhilProps): R
     try {
       console.log('[WizardPhil] Starting message send:', {
         input: input.trim(),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        messageCount: messages.length
       });
 
       const userMessage: Message = {
@@ -51,28 +66,42 @@ export function WizardPhil({ isOpen = false, onOpenChange }: WizardPhilProps): R
         timestamp: new Date(),
       };
 
+      console.log('[WizardPhil] Adding user message:', userMessage);
       setMessages(prev => [...prev, userMessage]);
       setInput('');
       setIsAnalyzing(true);
       setError(null);
 
       console.log('[WizardPhil] Calling anthropicService.processMessage');
-      const aiResponse = await anthropicService.processMessage(input);
-      console.log('[WizardPhil] Received AI response:', aiResponse);
+      try {
+        const aiResponse = await anthropicService.processMessage(input);
+        console.log('[WizardPhil] Received AI response:', aiResponse);
 
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        type: 'assistant',
-        content: aiResponse.content,
-        timestamp: new Date(),
-        suggestions: aiResponse.suggestions,
-        relatedTopics: aiResponse.relatedTopics,
-      };
+        const newMessage: Message = {
+          id: Date.now().toString(),
+          type: 'assistant',
+          content: aiResponse.content,
+          timestamp: new Date(),
+          suggestions: aiResponse.suggestions,
+          relatedTopics: aiResponse.relatedTopics,
+        };
 
-      console.log('[WizardPhil] Adding response message:', newMessage);
-      setMessages(prev => [...prev, newMessage]);
+        console.log('[WizardPhil] Adding response message:', newMessage);
+        setMessages(prev => [...prev, newMessage]);
+      } catch (apiError) {
+        console.error('[WizardPhil] API error:', {
+          name: apiError instanceof Error ? apiError.name : 'Unknown',
+          message: apiError instanceof Error ? apiError.message : 'Unknown error',
+          stack: apiError instanceof Error ? apiError.stack : undefined
+        });
+        throw apiError;
+      }
     } catch (error) {
-      console.error('[WizardPhil] Error in handleSend:', error);
+      console.error('[WizardPhil] Error in handleSend:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       const errorMessage = error instanceof Error ? error.message : 'Failed to process message';
       setError(errorMessage);
 
@@ -87,17 +116,32 @@ export function WizardPhil({ isOpen = false, onOpenChange }: WizardPhilProps): R
       console.log('[WizardPhil] Adding error message:', errorResponse);
       setMessages(prev => [...prev, errorResponse]);
     } finally {
+      console.log('[WizardPhil] Message processing completed');
       setIsAnalyzing(false);
     }
-  }, [input]);
+  }, [input, messages.length]);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[WizardPhil] Form submitted');
+    console.log('[WizardPhil] Form submitted with input:', input);
     void handleSend();
-  }, [handleSend]);
+  }, [handleSend, input]);
+
+  const handleClose = useCallback(() => {
+    console.log('[WizardPhil] Close button clicked');
+    onOpenChange?.(false);
+  }, [onOpenChange]);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('[WizardPhil] Input changed:', {
+      value: e.target.value,
+      length: e.target.value.length
+    });
+    setInput(e.target.value);
+  }, []);
 
   if (!isOpen) {
+    console.log('[WizardPhil] Component not rendering (isOpen: false)');
     return <></>;
   }
 
@@ -107,7 +151,7 @@ export function WizardPhil({ isOpen = false, onOpenChange }: WizardPhilProps): R
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">WizardPhil</h2>
           <button 
-            onClick={() => onOpenChange?.(false)}
+            onClick={handleClose}
             className="p-2 hover:bg-gray-100 rounded-full"
             aria-label="Close"
           >
@@ -193,7 +237,7 @@ export function WizardPhil({ isOpen = false, onOpenChange }: WizardPhilProps): R
             type="text"
             placeholder="Ask me anything..."
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleInputChange}
             disabled={isAnalyzing}
             className="flex-1 px-3 py-2 border rounded-md disabled:opacity-50"
             aria-label="Message input"

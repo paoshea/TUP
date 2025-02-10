@@ -14,7 +14,15 @@ const nextConfig = {
   },
   typescript: {
     ignoreBuildErrors: true,
-  }
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/ai/:path*',
+        destination: '/api/ai/:path*',
+      }
+    ];
+  },
 };
 
 module.exports = nextConfig;
