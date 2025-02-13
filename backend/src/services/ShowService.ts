@@ -1,83 +1,151 @@
-import { Types } from 'mongoose';
-import { Show, ShowEntry, ShowResult } from '../models';
-import { BaseService } from './BaseService';
+import { PrismaService } from './PrismaService';
 import { ApiError } from '../utils/apiResponse';
-import { animalService } from './AnimalService';
-import type { IShow } from '../models/Show';
-import type { IShowEntry } from '../models/ShowEntry';
-import type { IShowResult } from '../models/ShowResult';
-import type { IAnimal } from '../models/Animal';
+import { Prisma } from '@prisma/client';
+import {
+  ShowCategory,
+  ShowStats,
+  CreateShowInput,
+  UpdateShowInput,
+  ProfilePublic,
+  formatProfilePublic
+} from '../types/prisma';
 
-interface ShowStats {
-  totalEntries: number;
-  entriesByCategory: Record<string, number>;
-  results: Array<{
-    category: string;
-    entries: number;
-    topPlacements: Array<{
-      entry_number: number;
-      animal_name: string;
-      placement: number;
-      points: number;
-    }>;
-  }>;
+interface ShowResult {
+  placement: number;
+  points: number;
 }
 
-type PopulatedShowEntry = Omit<IShowEntry, 'animal'> & {
-  animal: Pick<IAnimal, '_id' | 'name'>;
-};
+interface ShowEntry {
+  id: string;
+  entryNumber: number;
+  category: string;
+  animal: {
+    id: string;
+    name: string;
+  };
+  results: ShowResult[];
+}
 
-export class ShowService extends BaseService<IShow> {
-  constructor() {
-    super(Show);
-  }
-
+export class ShowService extends PrismaService {
   /**
-   * Create a new show
+   * Create a show
    */
-  async createShow(data: Partial<IShow>, organizerId: string): Promise<IShow> {
-    const show = await this.create({
-      ...data,
-      organizer: new Types.ObjectId(organizerId),
-    });
-    return show;
+  async createShow(
+    data: CreateShowInput,
+    organizerId: string
+  ) {
+    try {
+      const result = await this.$transaction(async (tx) => {
+        const show = await tx.show.create({
+          data: {
+            ...data,
+            categories: JSON.stringify(data.categories),
+            organizer: {
+              connect: { id: organizerId }
+            }
+          },
+          include: {
+            organizer: true
+          }
+        });
+
+        return {
+          ...show,
+          categories: JSON.parse(show.categories as string) as ShowCategory[],
+          organizer: formatProfilePublic(show.organizer)
+        };
+      });
+
+      return result;
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   /**
    * Get shows organized by a user
    */
-  async getOrganizedShows(organizerId: string): Promise<IShow[]> {
-    return this.find({
-      organizer: new Types.ObjectId(organizerId),
-    });
+  async getOrganizedShows(organizerId: string) {
+    try {
+      const shows = await this.show.findMany({
+        where: { organizerId },
+        include: {
+          organizer: true
+        }
+      });
+
+      return shows.map(show => ({
+        ...show,
+        categories: JSON.parse(show.categories as string) as ShowCategory[],
+        organizer: formatProfilePublic(show.organizer)
+      }));
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   /**
    * Get upcoming shows
    */
-  async getUpcomingShows(): Promise<IShow[]> {
-    return this.find({
-      date: { $gte: new Date() },
-    }, {
-      sort: { date: 1 },
-    });
+  async getUpcomingShows() {
+    try {
+      const shows = await this.show.findMany({
+        where: {
+          date: {
+            gte: new Date()
+          }
+        },
+        orderBy: {
+          date: 'asc'
+        },
+        include: {
+          organizer: true
+        }
+      });
+
+      return shows.map(show => ({
+        ...show,
+        categories: JSON.parse(show.categories as string) as ShowCategory[],
+        organizer: formatProfilePublic(show.organizer)
+      }));
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   /**
    * Get a show by ID and verify access
    */
-  async getShowById(showId: string, userId: string, isAdmin: boolean = false): Promise<IShow> {
-    const show = await this.findById(showId);
-    if (!show) {
-      throw new ApiError(404, 'SHOW_NOT_FOUND', 'Show not found');
-    }
+  async getShowById(
+    showId: string,
+    userId: string,
+    isAdmin: boolean = false
+  ) {
+    try {
+      const show = await this.show.findUnique({
+        where: { id: showId },
+        include: {
+          organizer: true
+        }
+      });
 
-    // Check access - allow if user is admin or organizer
-    if (!isAdmin && show.organizer.toString() !== userId) {
-      throw new ApiError(403, 'FORBIDDEN', 'You do not have access to this show');
-    }
+      if (!show) {
+        throw new ApiError(404, 'SHOW_NOT_FOUND', 'Show not found');
+      }
 
-    return show;
+      // Check access - allow if user is admin or organizer
+      if (!isAdmin && show.organizerId !== userId) {
+        throw new ApiError(403, 'FORBIDDEN', 'You do not have access to this show');
+      }
+
+      return {
+        ...show,
+        categories: JSON.parse(show.categories as string) as ShowCategory[],
+        organizer: formatProfilePublic(show.organizer)
+      };
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   /**
@@ -86,193 +154,138 @@ export class ShowService extends BaseService<IShow> {
   async updateShow(
     showId: string,
     userId: string,
-    data: Partial<IShow>,
+    data: UpdateShowInput,
     isAdmin: boolean = false
-  ): Promise<IShow> {
-    const show = await this.getShowById(showId, userId, isAdmin);
+  ) {
+    await this.getShowById(showId, userId, isAdmin);
 
-    // Only allow organizer or admin to update
-    if (!isAdmin && show.organizer.toString() !== userId) {
-      throw new ApiError(403, 'FORBIDDEN', 'Only the organizer can update this show');
+    try {
+      const updateData: Prisma.ShowUpdateInput = {
+        ...data,
+        categories: data.categories ? JSON.stringify(data.categories) : undefined
+      };
+
+      const result = await this.show.update({
+        where: { id: showId },
+        data: updateData,
+        include: {
+          organizer: true
+        }
+      });
+
+      return {
+        ...result,
+        categories: JSON.parse(result.categories as string) as ShowCategory[],
+        organizer: formatProfilePublic(result.organizer)
+      };
+    } catch (error) {
+      this.handleError(error);
     }
-
-    // Remove protected fields from update data
-    const { organizer, ...updateData } = data;
-
-    const updatedShow = await this.update(showId, updateData);
-    if (!updatedShow) {
-      throw new ApiError(404, 'SHOW_NOT_FOUND', 'Show not found');
-    }
-
-    return updatedShow;
   }
 
   /**
    * Delete a show
    */
-  async deleteShow(showId: string, userId: string, isAdmin: boolean = false): Promise<void> {
-    const show = await this.getShowById(showId, userId, isAdmin);
-
-    // Only allow organizer or admin to delete
-    if (!isAdmin && show.organizer.toString() !== userId) {
-      throw new ApiError(403, 'FORBIDDEN', 'Only the organizer can delete this show');
-    }
-
-    const deletedShow = await this.delete(showId);
-    if (!deletedShow) {
-      throw new ApiError(404, 'SHOW_NOT_FOUND', 'Show not found');
-    }
-  }
-
-  /**
-   * Create a show entry
-   */
-  async createEntry(
+  async deleteShow(
     showId: string,
-    animalId: string,
     userId: string,
-    category: string
-  ): Promise<IShowEntry> {
-    // Verify show exists and is upcoming
-    const show = await this.findById(showId);
-    if (!show) {
-      throw new ApiError(404, 'SHOW_NOT_FOUND', 'Show not found');
-    }
+    isAdmin: boolean = false
+  ): Promise<void> {
+    await this.getShowById(showId, userId, isAdmin);
 
-    if (show.date < new Date()) {
-      throw new ApiError(400, 'SHOW_ENDED', 'Cannot enter a past show');
-    }
-
-    // Verify animal exists and is owned by user
-    const animal = await animalService.getAnimalById(animalId, userId);
-
-    // Verify category exists in show
-    if (!show.categories.some(c => c.name === category)) {
-      throw new ApiError(400, 'INVALID_CATEGORY', 'Invalid show category');
-    }
-
-    // Get next entry number
-    const lastEntry = await ShowEntry.findOne({ show: show._id })
-      .sort({ entry_number: -1 })
-      .select('entry_number')
-      .lean();
-
-    const entry_number = (lastEntry?.entry_number || 0) + 1;
-
-    // Create entry
-    const entry = await ShowEntry.create({
-      show: show._id,
-      animal: animal._id,
-      category,
-      entry_number,
-      owner: new Types.ObjectId(userId),
-    });
-
-    return entry;
-  }
-
-  /**
-   * Get entries for a show
-   */
-  async getShowEntries(showId: string): Promise<PopulatedShowEntry[]> {
     try {
-      const entries = await ShowEntry.find({ show: new Types.ObjectId(showId) })
-        .populate<{ animal: Pick<IAnimal, '_id' | 'name'> }>('animal', '_id name')
-        .populate('owner')
-        .sort('entry_number')
-        .exec();
-
-      return entries as PopulatedShowEntry[];
+      await this.show.delete({
+        where: { id: showId }
+      });
     } catch (error) {
-      throw new ApiError(500, 'DATABASE_ERROR', 'Failed to fetch show entries');
+      this.handleError(error);
     }
-  }
-
-  /**
-   * Record show results
-   */
-  async recordResult(
-    entryId: string,
-    placement: number,
-    points: number,
-    notes?: string
-  ): Promise<IShowResult> {
-    // Verify entry exists
-    const entry = await ShowEntry.findById(entryId);
-    if (!entry) {
-      throw new ApiError(404, 'ENTRY_NOT_FOUND', 'Show entry not found');
-    }
-
-    // Create result
-    const result = await ShowResult.create({
-      entry: entry._id,
-      placement,
-      points,
-      notes,
-    });
-
-    return result;
   }
 
   /**
    * Get show statistics
    */
   async getShowStats(showId: string): Promise<ShowStats> {
-    const show = await this.findById(showId);
-    if (!show) {
-      throw new ApiError(404, 'SHOW_NOT_FOUND', 'Show not found');
-    }
+    try {
+      const show = await this.$queryRaw<any>`
+        SELECT 
+          s.categories,
+          json_agg(
+            json_build_object(
+              'id', e.id,
+              'entryNumber', e."entryNumber",
+              'category', e.category,
+              'animal', json_build_object(
+                'id', a.id,
+                'name', a.name
+              ),
+              'results', COALESCE(
+                (
+                  SELECT json_agg(r.*)
+                  FROM "ShowResult" r
+                  WHERE r."entryId" = e.id
+                ),
+                '[]'
+              )
+            )
+          ) as entries
+        FROM "Show" s
+        LEFT JOIN "ShowEntry" e ON e."showId" = s.id
+        LEFT JOIN "Animal" a ON a.id = e."animalId"
+        WHERE s.id = ${showId}
+        GROUP BY s.id
+      `;
 
-    const entries = await ShowEntry.find({ show: show._id })
-      .populate<{ animal: Pick<IAnimal, '_id' | 'name'> }>('animal', '_id name')
-      .exec() as PopulatedShowEntry[];
+      if (!show || !show.length) {
+        throw new ApiError(404, 'SHOW_NOT_FOUND', 'Show not found');
+      }
 
-    const results = await ShowResult.find({
-      entry: { $in: entries.map(e => e._id) },
-    }).exec();
+      const showData = show[0];
+      const categories = JSON.parse(showData.categories) as ShowCategory[];
+      const entries = showData.entries || [];
 
-    const stats: ShowStats = {
-      totalEntries: entries.length,
-      entriesByCategory: {},
-      results: [],
-    };
+      const stats: ShowStats = {
+        totalEntries: entries.length,
+        entriesByCategory: {},
+        results: []
+      };
 
-    // Calculate entries by category
-    entries.forEach(entry => {
-      stats.entriesByCategory[entry.category] = 
-        (stats.entriesByCategory[entry.category] || 0) + 1;
-    });
-
-    // Calculate results by category
-    show.categories.forEach(category => {
-      const categoryEntries = entries.filter(e => e.category === category.name);
-      const validResults = results.filter(r => 
-        r.placement != null && 
-        r.points != null && 
-        categoryEntries.some(e => e._id.equals(r.entry))
-      );
-
-      const topPlacements = validResults
-        .sort((a, b) => (a.placement as number) - (b.placement as number))
-        .slice(0, 3)
-        .map(result => {
-          const entry = categoryEntries.find(e => e._id.equals(result.entry))!;
-          return {
-            entry_number: entry.entry_number,
-            animal_name: entry.animal.name,
-            placement: result.placement as number,
-            points: result.points as number,
-          };
-        });
-
-      stats.results.push({
-        category: category.name,
-        entries: categoryEntries.length,
-        topPlacements,
+      // Calculate entries by category
+      entries.forEach((entry: ShowEntry) => {
+        stats.entriesByCategory[entry.category] =
+          (stats.entriesByCategory[entry.category] || 0) + 1;
       });
-    });
 
-    return stats;
+      // Calculate results by category
+      categories.forEach(category => {
+        const categoryEntries = entries.filter((e: ShowEntry) => e.category === category.name);
+
+        const topPlacements = categoryEntries
+          .map((entry: ShowEntry) => ({
+            entry,
+            result: entry.results[0] // Assuming one result per entry
+          }))
+          .filter(({ result }: { result: ShowResult | undefined }) => result?.placement != null && result?.points != null)
+          .sort((a: { result: ShowResult }, b: { result: ShowResult }) => a.result.placement - b.result.placement)
+          .slice(0, 3)
+          .map(({ entry, result }: { entry: ShowEntry; result: ShowResult }) => ({
+            entry_number: entry.entryNumber,
+            animal_name: entry.animal.name,
+            placement: result.placement,
+            points: result.points
+          }));
+
+        stats.results.push({
+          category: category.name,
+          entries: categoryEntries.length,
+          topPlacements
+        });
+      });
+
+      return stats;
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 }
 

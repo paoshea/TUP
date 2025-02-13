@@ -1,85 +1,98 @@
-import { Types } from 'mongoose';
-import { Evaluation } from '../models';
-import { BaseService } from './BaseService';
+import { PrismaService } from './PrismaService';
 import { ApiError } from '../utils/apiResponse';
-import { animalService } from './AnimalService';
-import type { IEvaluation } from '../models/Evaluation';
+import { Prisma } from '@prisma/client';
+import {
+  CreateEvaluationInput,
+  UpdateEvaluationInput,
+  EvaluationWithRelations,
+  EvaluationScores,
+  EvaluationMetadata,
+  EVALUATION_CRITERIA,
+  evaluationInclude,
+  RawEvaluation,
+  DbCreateInput,
+  DbUpdateInput
+} from '../types/evaluation';
 
-export class EvaluationService extends BaseService<IEvaluation> {
-  constructor() {
-    super(Evaluation);
+export class EvaluationService extends PrismaService {
+  /**
+   * Transform raw evaluation data to typed evaluation
+   */
+  private transformEvaluation(evaluation: RawEvaluation): EvaluationWithRelations {
+    return {
+      ...evaluation,
+      scores: evaluation.scores as EvaluationScores,
+      metadata: evaluation.metadata as EvaluationMetadata | undefined
+    };
   }
 
   /**
-   * Create a new evaluation
+   * Create an evaluation
    */
   async createEvaluation(
-    animalId: string,
-    evaluatorId: string,
-    data: Partial<IEvaluation>
-  ): Promise<IEvaluation> {
-    // Verify animal exists
-    const animal = await animalService.findById(animalId);
-    if (!animal) {
-      throw new ApiError(404, 'ANIMAL_NOT_FOUND', 'Animal not found');
+    data: CreateEvaluationInput,
+    evaluatorId: string
+  ): Promise<EvaluationWithRelations> {
+    try {
+      // Validate scores
+      this.validateScores(data.scores);
+
+      const createData: DbCreateInput = {
+        scores: data.scores as Prisma.InputJsonValue,
+        notes: data.notes ?? null,
+        metadata: data.metadata as Prisma.InputJsonValue ?? null,
+        animal: {
+          connect: { id: data.animalId }
+        },
+        evaluator: {
+          connect: { id: evaluatorId }
+        }
+      };
+
+      // Create evaluation
+      const result = await this.evaluation.create({
+        data: createData,
+        include: evaluationInclude
+      });
+
+      return this.transformEvaluation(result);
+    } catch (error) {
+      this.handleError(error);
     }
-
-    // Create evaluation
-    const evaluation = await this.create({
-      ...data,
-      animal: new Types.ObjectId(animalId),
-      evaluator: new Types.ObjectId(evaluatorId),
-    });
-
-    return evaluation;
   }
 
   /**
    * Get evaluations for an animal
    */
-  async getAnimalEvaluations(animalId: string): Promise<IEvaluation[]> {
-    return this.find({
-      animal: new Types.ObjectId(animalId),
-    });
+  async getAnimalEvaluations(animalId: string): Promise<EvaluationWithRelations[]> {
+    try {
+      const evaluations = await this.evaluation.findMany({
+        where: { animalId },
+        include: evaluationInclude,
+        orderBy: { createdAt: 'desc' }
+      });
+
+      return evaluations.map((evaluation) => this.transformEvaluation(evaluation));
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   /**
-   * Get evaluations by an evaluator
+   * Get evaluations by evaluator
    */
-  async getEvaluatorEvaluations(evaluatorId: string): Promise<IEvaluation[]> {
-    return this.find({
-      evaluator: new Types.ObjectId(evaluatorId),
-    });
-  }
+  async getEvaluatorEvaluations(evaluatorId: string): Promise<EvaluationWithRelations[]> {
+    try {
+      const evaluations = await this.evaluation.findMany({
+        where: { evaluatorId },
+        include: evaluationInclude,
+        orderBy: { createdAt: 'desc' }
+      });
 
-  /**
-   * Get an evaluation by ID and verify access
-   */
-  async getEvaluationById(
-    evaluationId: string,
-    userId: string,
-    isAdmin: boolean = false
-  ): Promise<IEvaluation> {
-    const evaluation = await this.findById(evaluationId);
-    if (!evaluation) {
-      throw new ApiError(404, 'EVALUATION_NOT_FOUND', 'Evaluation not found');
+      return evaluations.map((evaluation) => this.transformEvaluation(evaluation));
+    } catch (error) {
+      this.handleError(error);
     }
-
-    // Check access - allow if user is admin, evaluator, or animal owner
-    const animal = await animalService.findById(evaluation.animal.toString());
-    if (!animal) {
-      throw new ApiError(404, 'ANIMAL_NOT_FOUND', 'Animal not found');
-    }
-
-    const hasAccess = isAdmin ||
-      evaluation.evaluator.toString() === userId ||
-      animal.owner.toString() === userId;
-
-    if (!hasAccess) {
-      throw new ApiError(403, 'FORBIDDEN', 'You do not have access to this evaluation');
-    }
-
-    return evaluation;
   }
 
   /**
@@ -87,91 +100,89 @@ export class EvaluationService extends BaseService<IEvaluation> {
    */
   async updateEvaluation(
     evaluationId: string,
-    userId: string,
-    data: Partial<IEvaluation>,
-    isAdmin: boolean = false
-  ): Promise<IEvaluation> {
-    const evaluation = await this.getEvaluationById(evaluationId, userId, isAdmin);
+    data: UpdateEvaluationInput,
+    evaluatorId: string
+  ): Promise<EvaluationWithRelations> {
+    try {
+      // Verify evaluation exists and belongs to evaluator
+      const existing = await this.evaluation.findFirst({
+        where: {
+          id: evaluationId,
+          evaluatorId
+        }
+      });
 
-    // Only allow evaluator or admin to update
-    if (!isAdmin && evaluation.evaluator.toString() !== userId) {
-      throw new ApiError(403, 'FORBIDDEN', 'Only the evaluator can update this evaluation');
+      if (!existing) {
+        throw new ApiError(404, 'EVALUATION_NOT_FOUND', 'Evaluation not found or access denied');
+      }
+
+      // Validate scores if provided
+      if (data.scores) {
+        this.validateScores(data.scores);
+      }
+
+      const updateData: DbUpdateInput = {
+        scores: data.scores ? (data.scores as Prisma.InputJsonValue) : undefined,
+        notes: data.notes ?? undefined,
+        metadata: data.metadata ? (data.metadata as Prisma.InputJsonValue) : undefined
+      };
+
+      // Update evaluation
+      const result = await this.evaluation.update({
+        where: { id: evaluationId },
+        data: updateData,
+        include: evaluationInclude
+      });
+
+      return this.transformEvaluation(result);
+    } catch (error) {
+      this.handleError(error);
     }
-
-    // Remove protected fields from update data
-    const { animal, evaluator, ...updateData } = data;
-
-    const updatedEvaluation = await this.update(evaluationId, updateData);
-    if (!updatedEvaluation) {
-      throw new ApiError(404, 'EVALUATION_NOT_FOUND', 'Evaluation not found');
-    }
-
-    return updatedEvaluation;
   }
 
   /**
    * Delete an evaluation
    */
-  async deleteEvaluation(
-    evaluationId: string,
-    userId: string,
-    isAdmin: boolean = false
-  ): Promise<void> {
-    const evaluation = await this.getEvaluationById(evaluationId, userId, isAdmin);
+  async deleteEvaluation(evaluationId: string, evaluatorId: string): Promise<void> {
+    try {
+      // Verify evaluation exists and belongs to evaluator
+      const existing = await this.evaluation.findFirst({
+        where: {
+          id: evaluationId,
+          evaluatorId
+        }
+      });
 
-    // Only allow evaluator or admin to delete
-    if (!isAdmin && evaluation.evaluator.toString() !== userId) {
-      throw new ApiError(403, 'FORBIDDEN', 'Only the evaluator can delete this evaluation');
-    }
+      if (!existing) {
+        throw new ApiError(404, 'EVALUATION_NOT_FOUND', 'Evaluation not found or access denied');
+      }
 
-    const deletedEvaluation = await this.delete(evaluationId);
-    if (!deletedEvaluation) {
-      throw new ApiError(404, 'EVALUATION_NOT_FOUND', 'Evaluation not found');
+      await this.evaluation.delete({
+        where: { id: evaluationId }
+      });
+    } catch (error) {
+      this.handleError(error);
     }
   }
 
   /**
-   * Get evaluation statistics
+   * Validate evaluation scores
    */
-  async getEvaluationStats(animalId: string): Promise<{
-    total: number;
-    averageScores: Record<string, number>;
-    scoreDistribution: Record<string, number[]>;
-    evaluatorCount: number;
-  }> {
-    const evaluations = await this.getAnimalEvaluations(animalId);
+  private validateScores(scores: EvaluationScores): void {
+    for (const [category, score] of Object.entries(scores)) {
+      const criteria = EVALUATION_CRITERIA[category];
+      if (!criteria) {
+        throw new ApiError(400, 'INVALID_CATEGORY', `Invalid evaluation category: ${category}`);
+      }
 
-    const stats = {
-      total: evaluations.length,
-      averageScores: {} as Record<string, number>,
-      scoreDistribution: {} as Record<string, number[]>,
-      evaluatorCount: new Set(evaluations.map(e => e.evaluator.toString())).size,
-    };
-
-    // Initialize score tracking
-    const scoreTypes = ['movement', 'conformation', 'muscleDevelopment', 'breedCharacteristics'];
-    const scoreArrays: Record<string, number[]> = {};
-    scoreTypes.forEach(type => {
-      scoreArrays[type] = [];
-      stats.scoreDistribution[type] = Array(11).fill(0); // 0-10 scores
-    });
-
-    // Calculate statistics
-    evaluations.forEach(evaluation => {
-      Object.entries(evaluation.scores).forEach(([type, score]) => {
-        scoreArrays[type].push(score);
-        stats.scoreDistribution[type][score]++;
-      });
-    });
-
-    // Calculate averages
-    Object.entries(scoreArrays).forEach(([type, scores]) => {
-      stats.averageScores[type] = scores.length > 0
-        ? scores.reduce((a, b) => a + b, 0) / scores.length
-        : 0;
-    });
-
-    return stats;
+      if (typeof score !== 'number' || score < 0 || score > criteria.maxScore) {
+        throw new ApiError(
+          400,
+          'INVALID_SCORE',
+          `Invalid score for ${category}. Must be between 0 and ${criteria.maxScore}`
+        );
+      }
+    }
   }
 }
 

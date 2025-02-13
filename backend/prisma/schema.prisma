@@ -2,6 +2,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["jsonProtocol"]
 }
 
 datasource db {
@@ -20,9 +21,10 @@ model Profile {
   updatedAt DateTime @updatedAt
 
   // Relations
-  animals     Animal[]
-  evaluations Evaluation[] @relation("EvaluatorRelation")
-  shows       Show[]
+  animals      Animal[]
+  evaluations  Evaluation[]    @relation("EvaluatorRelation")
+  organizedShows Show[]       @relation("ShowOrganizer")
+  showEntries  ShowEntry[]    @relation("EntryOwner")
 
   @@index([email])
   @@index([isActive])
@@ -44,6 +46,7 @@ model Animal {
   owner       Profile      @relation(fields: [ownerId], references: [id])
   ownerId     String
   evaluations Evaluation[]
+  showEntries ShowEntry[] @relation("EntryAnimal")
 
   @@index([ownerId])
   @@index([breed])
@@ -52,29 +55,66 @@ model Animal {
 }
 
 model Show {
-  id        String   @id @default(uuid())
-  name      String
-  date      DateTime
-  location  String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // Categories stored as Json array of { name: string, classes: string[] }
-  categories Json
+  id         String      @id @default(uuid())
+  name       String
+  date       DateTime
+  location   String
+  categories Json        // Stores array of { name: string, classes: string[] }
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
   // Relations
-  organizer   Profile @relation(fields: [organizerId], references: [id])
+  organizer   Profile     @relation("ShowOrganizer", fields: [organizerId], references: [id])
   organizerId String
+  showEntries ShowEntry[] @relation("ShowEntries")
 
   @@index([date])
   @@index([location])
   @@index([organizerId])
 }
 
+model ShowEntry {
+  id          String       @id @default(uuid())
+  entryNumber Int
+  category    String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  show     Show        @relation("ShowEntries", fields: [showId], references: [id], onDelete: Cascade)
+  showId   String
+  animal   Animal      @relation("EntryAnimal", fields: [animalId], references: [id])
+  animalId String
+  owner    Profile     @relation("EntryOwner", fields: [ownerId], references: [id])
+  ownerId  String
+  showResults ShowResult[]
+
+  @@unique([showId, entryNumber])
+  @@index([showId])
+  @@index([animalId])
+  @@index([ownerId])
+}
+
+model ShowResult {
+  id        String   @id @default(uuid())
+  placement Int
+  points    Int
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  showEntry ShowEntry @relation(fields: [showEntryId], references: [id], onDelete: Cascade)
+  showEntryId String
+
+  @@index([showEntryId])
+}
+
 model Evaluation {
   id        String   @id @default(uuid())
-  scores    Json     // Stores { movement, conformation, muscleDevelopment, breedCharacteristics }
+  scores    Json     @db.JsonB // Stores { movement, conformation, muscleDevelopment, breedCharacteristics }
   notes     String?
+  metadata  Json?    @db.JsonB // Stores { location, weather, surfaceType, evaluatorNotes }
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
