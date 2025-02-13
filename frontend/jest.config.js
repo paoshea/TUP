@@ -1,7 +1,11 @@
 /** @type {import('jest').Config} */
-module.exports = {
+const config = {
   testEnvironment: 'jest-environment-jsdom',
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.minimal.ts'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1',
+    '^lucide-react$': '<rootDir>/node_modules/lucide-react/dist/cjs/lucide-react.js'
+  },
   transform: {
     '^.+\\.(t|j)sx?$': ['@swc/jest', {
       jsc: {
@@ -14,10 +18,15 @@ module.exports = {
           syntax: 'typescript',
           tsx: true
         }
-      },
-      tsconfig: '<rootDir>/tsconfig.test.json'
+      }
     }]
   },
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-  testMatch: ['**/?(*.)+(spec|test).[tj]sx?']
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
+  roots: ['<rootDir>'],
+  modulePaths: ['<rootDir>'],
+  moduleDirectories: ['node_modules', '<rootDir>'],
+  testMatch: ['**/__tests__/**/*.test.[jt]sx']
 };
+
+module.exports = config;
