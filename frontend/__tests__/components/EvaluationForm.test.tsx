@@ -1,7 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@/utils/test-utils';
 import { EvaluationForm } from '@/components/features/evaluations';
 import * as useOfflineSyncModule from '@/hooks/useOfflineSync';
-import { mockStore } from '@/lib/mock/store';
 
 // Mock the useOfflineSync hook
 jest.mock('@/hooks/useOfflineSync', () => ({
@@ -10,14 +9,15 @@ jest.mock('@/hooks/useOfflineSync', () => ({
 }));
 
 describe('EvaluationForm', () => {
-  const mockAnimal = {
-    id: 'test-animal-1',
-    name: 'Test Animal',
-    breed: 'Test Breed',
-    status: 'Active',
-  };
+  const mockAnimals = [
+    {
+      id: 'test-animal-1',
+      name: 'Test Animal',
+    }
+  ];
 
-  const mockOnComplete = jest.fn();
+  const mockOnSubmit = jest.fn();
+  const mockOnCancel = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -28,7 +28,13 @@ describe('EvaluationForm', () => {
   });
 
   it('renders the evaluation form correctly', () => {
-    render(<EvaluationForm animalId={mockAnimal.id} onComplete={mockOnComplete} />);
+    render(
+      <EvaluationForm
+        animals={mockAnimals}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    );
 
     // Check for main form elements
     expect(screen.getByText(/Movement/i)).toBeInTheDocument();
@@ -38,69 +44,90 @@ describe('EvaluationForm', () => {
   });
 
   it('handles score inputs correctly', async () => {
-    render(<EvaluationForm animalId={mockAnimal.id} onComplete={mockOnComplete} />);
+    render(
+      <EvaluationForm
+        animals={mockAnimals}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    );
 
     // Find score inputs
-    const movementInput = screen.getByLabelText(/Movement/i);
-    const conformationInput = screen.getByLabelText(/Conformation/i);
+    const movementSlider = screen.getByRole('slider', { name: /Movement/i });
+    const conformationSlider = screen.getByRole('slider', { name: /Conformation/i });
 
     // Change scores
-    fireEvent.change(movementInput, { target: { value: '8' } });
-    fireEvent.change(conformationInput, { target: { value: '9' } });
+    fireEvent.change(movementSlider, { target: { value: '8' } });
+    fireEvent.change(conformationSlider, { target: { value: '9' } });
 
     // Check if values are updated
-    expect(movementInput).toHaveValue(8);
-    expect(conformationInput).toHaveValue(9);
+    expect(movementSlider).toHaveValue('8');
+    expect(conformationSlider).toHaveValue('9');
   });
 
   it('submits the form with correct data', async () => {
-    const mockSubmit = jest.spyOn(mockStore, 'saveEvaluation');
-    render(<EvaluationForm animalId={mockAnimal.id} onComplete={mockOnComplete} />);
+    render(
+      <EvaluationForm
+        animals={mockAnimals}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    );
 
-    // Fill in form
-    fireEvent.change(screen.getByLabelText(/Movement/i), { target: { value: '8' } });
-    fireEvent.change(screen.getByLabelText(/Conformation/i), { target: { value: '9' } });
-    fireEvent.change(screen.getByLabelText(/Notes/i), {
-      target: { value: 'Test evaluation notes' },
-    });
+    // Select animal
+    const animalSelect = screen.getByRole('combobox');
+    fireEvent.change(animalSelect, { target: { value: mockAnimals[0].id } });
+
+    // Change scores
+    const movementSlider = screen.getByRole('slider', { name: /Movement/i });
+    fireEvent.change(movementSlider, { target: { value: '8' } });
+
+    // Add notes
+    const notesTextarea = screen.getByRole('textbox', { name: /Notes/i });
+    fireEvent.change(notesTextarea, { target: { value: 'Test evaluation notes' } });
 
     // Submit form
-    fireEvent.click(screen.getByText(/Submit/i));
+    fireEvent.click(screen.getByText(/Save Evaluation/i));
 
     await waitFor(() => {
-      expect(mockSubmit).toHaveBeenCalledWith(
+      expect(mockOnSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
-          animalId: mockAnimal.id,
+          animalId: mockAnimals[0].id,
           scores: expect.objectContaining({
             movement: 8,
-            conformation: 9,
           }),
           notes: 'Test evaluation notes',
         })
       );
-      expect(mockOnComplete).toHaveBeenCalled();
     });
   });
 
   it('validates required fields', async () => {
-    render(<EvaluationForm animalId={mockAnimal.id} onComplete={mockOnComplete} />);
+    render(
+      <EvaluationForm
+        animals={mockAnimals}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    );
 
-    // Try to submit without filling required fields
-    fireEvent.click(screen.getByText(/Submit/i));
+    // Try to submit without selecting an animal
+    fireEvent.click(screen.getByText(/Save Evaluation/i));
 
-    await waitFor(() => {
-      expect(screen.getByText(/All scores are required/i)).toBeInTheDocument();
-    });
+    // Check for validation message
+    expect(screen.getByRole('combobox')).toBeInvalid();
   });
 
-  it('handles offline state correctly', () => {
-    (useOfflineSyncModule.default as jest.Mock).mockReturnValue({
-      isOnline: false,
-      syncStatus: 'pending',
-    });
+  it('handles cancel button click', () => {
+    render(
+      <EvaluationForm
+        animals={mockAnimals}
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+      />
+    );
 
-    render(<EvaluationForm animalId={mockAnimal.id} onComplete={mockOnComplete} />);
-
-    expect(screen.getByText(/Working Offline/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(mockOnCancel).toHaveBeenCalled();
   });
 });

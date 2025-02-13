@@ -1,16 +1,31 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@/utils/test-utils';
-import { FlockAnalyzer } from '@/components/FlockAnalyzer';
+import { FlockAnalyzer } from '@/components/features/analytics/FlockAnalyzer';
 import type { Animal } from '@/types';
 
 // Create a complete mock implementation
 const mockAIHook = {
   loading: false,
   error: null as Error | null,
-  analysis: null as { insights: string[]; confidence: number } | null,
+  analysis: null as {
+    insights: string[];
+    confidence: number;
+    recommendations?: string[];
+    historical?: {
+      improvements: string[];
+      trends: Record<string, number>;
+      predictions: string[];
+    };
+  } | null,
   analyzeAnimal: jest.fn().mockResolvedValue({
     insights: ['Test insight'],
-    confidence: 0.85
+    confidence: 0.85,
+    recommendations: ['Test recommendation'],
+    historical: {
+      improvements: ['Test improvement'],
+      trends: { 'Test Metric': 5 },
+      predictions: ['Test prediction']
+    }
   }),
   getRecommendations: jest.fn().mockResolvedValue(['Test recommendation']),
   compareWithHistorical: jest.fn().mockResolvedValue({
@@ -81,9 +96,21 @@ describe('FlockAnalyzer', () => {
       expect(screen.getByText('Analyzing...')).toBeInTheDocument();
     });
 
+    // Mock successful analysis
+    mockAIHook.analysis = {
+      insights: ['Test insight'],
+      confidence: 0.85,
+      recommendations: ['Test recommendation'],
+      historical: {
+        improvements: ['Test improvement'],
+        trends: { 'Test Metric': 5 },
+        predictions: ['Test prediction']
+      }
+    };
+
     // Wait for analysis results
     await waitFor(() => {
-      expect(screen.getByText('Analysis Results for Test Animal 1')).toBeInTheDocument();
+      expect(screen.getByText(/Analysis Results for Test Animal 1/)).toBeInTheDocument();
       expect(screen.getByText('Test insight')).toBeInTheDocument();
       expect(screen.getByText('Test recommendation')).toBeInTheDocument();
       expect(screen.getByText('Test improvement')).toBeInTheDocument();
@@ -97,7 +124,6 @@ describe('FlockAnalyzer', () => {
   });
 
   it('handles loading state', async () => {
-    // Set loading state before render
     mockAIHook.loading = true;
 
     render(<FlockAnalyzer animals={mockAnimals} />);
@@ -106,11 +132,8 @@ describe('FlockAnalyzer', () => {
     const analyzeButton = screen.getAllByText('Analyze')[0];
     fireEvent.click(analyzeButton);
 
-    // Wait for loading state
-    await waitFor(() => {
-      expect(screen.getByText('Analyzing...')).toBeInTheDocument();
-      expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
-    });
+    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+    expect(screen.getByText('Analyzing...')).toBeInTheDocument();
   });
 
   it('displays error state', async () => {
@@ -127,8 +150,34 @@ describe('FlockAnalyzer', () => {
     await waitFor(() => {
       expect(screen.getByText('An error occurred during analysis')).toBeInTheDocument();
     });
+  });
 
-    // Verify error state
-    expect(mockAIHook.error).toBe(mockError);
+  it('handles reset analysis', async () => {
+    render(<FlockAnalyzer animals={mockAnimals} />);
+    
+    // Click analyze button and wait for results
+    const analyzeButton = screen.getAllByText('Analyze')[0];
+    fireEvent.click(analyzeButton);
+
+    mockAIHook.analysis = {
+      insights: ['Test insight'],
+      confidence: 0.85,
+      recommendations: ['Test recommendation'],
+      historical: {
+        improvements: ['Test improvement'],
+        trends: { 'Test Metric': 5 },
+        predictions: ['Test prediction']
+      }
+    };
+
+    await waitFor(() => {
+      expect(screen.getByText(/Analysis Results/)).toBeInTheDocument();
+    });
+
+    // Click reset button
+    const resetButton = screen.getByText('Reset Analysis');
+    fireEvent.click(resetButton);
+
+    expect(mockAIHook.resetAnalysis).toHaveBeenCalled();
   });
 });

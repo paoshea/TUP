@@ -2,10 +2,10 @@ export interface Animal {
   id: string;
   name: string;
   breed: string;
-  age: number;
+  age?: number;
   status: string;
-  registrationNumber: string;
-  birthDate: string;
+  registrationNumber?: string;
+  birthDate?: string;
   images: string[];
   scores: {
     movement: number;
@@ -13,8 +13,10 @@ export interface Animal {
     muscleDevelopment: number;
     breedCharacteristics: number;
   };
-  notes: string;
+  notes?: string;
   lastEvaluation?: string;
+  category?: string;
+  region?: string;
 }
 
 export interface Evaluation {
@@ -28,7 +30,7 @@ export interface Evaluation {
     muscleDevelopment: number;
     breedCharacteristics: number;
   };
-  notes: string;
+  notes?: string;
   images: string[];
   evaluator: string;
   overallScore: number;
@@ -39,7 +41,7 @@ export interface Show {
   name: string;
   date: string;
   location: string;
-  status: 'upcoming' | 'ongoing' | 'completed';
+  status: string;
   entryCount: number;
   categories: string[];
   description: string;
@@ -67,7 +69,7 @@ export interface ChecklistItem {
   completed: boolean;
   category: string;
   dueDate: string;
-  assignedTo?: string;
+  assignedTo: string;
 }
 
 export interface Statistics {
