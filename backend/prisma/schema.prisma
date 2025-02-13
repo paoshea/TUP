@@ -1,0 +1,90 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  fullName  String?
+  isActive  Boolean  @default(true)
+  lastLogin DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  animals     Animal[]
+  evaluations Evaluation[] @relation("EvaluatorRelation")
+  shows       Show[]
+
+  @@index([email])
+  @@index([isActive])
+}
+
+model Animal {
+  id        String   @id @default(uuid())
+  name      String
+  category  String
+  breed     String
+  region    String
+  notes     String?
+  images    String[]
+  scores    Json     // Stores { movement, conformation, muscleDevelopment, breedCharacteristics }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  owner       Profile      @relation(fields: [ownerId], references: [id])
+  ownerId     String
+  evaluations Evaluation[]
+
+  @@index([ownerId])
+  @@index([breed])
+  @@index([region])
+  @@index([category])
+}
+
+model Show {
+  id        String   @id @default(uuid())
+  name      String
+  date      DateTime
+  location  String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Categories stored as Json array of { name: string, classes: string[] }
+  categories Json
+
+  // Relations
+  organizer   Profile @relation(fields: [organizerId], references: [id])
+  organizerId String
+
+  @@index([date])
+  @@index([location])
+  @@index([organizerId])
+}
+
+model Evaluation {
+  id        String   @id @default(uuid())
+  scores    Json     // Stores { movement, conformation, muscleDevelopment, breedCharacteristics }
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  animal     Animal  @relation(fields: [animalId], references: [id])
+  animalId   String
+  evaluator  Profile @relation("EvaluatorRelation", fields: [evaluatorId], references: [id])
+  evaluatorId String
+
+  @@index([animalId])
+  @@index([evaluatorId])
+  @@index([createdAt(sort: Desc)])
+}

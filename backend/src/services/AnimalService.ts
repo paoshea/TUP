@@ -1,77 +1,138 @@
-import { Types } from 'mongoose';
-import { Animal } from '../models';
-import { BaseService } from './BaseService';
+import { PrismaService } from './PrismaService';
 import { ApiError } from '../utils/apiResponse';
-import type { IAnimal } from '../models/Animal';
+import { PrismaClient } from '@prisma/client';
+import { Scores } from '../types/prisma';
 
-export class AnimalService extends BaseService<IAnimal> {
-  constructor() {
-    super(Animal);
-  }
+interface BaseAnimal {
+  name: string;
+  category: string;
+  breed: string;
+  region: string;
+  notes?: string | null;
+  images: string[];
+  scores: Scores;
+}
 
+interface AnimalWithOwner extends BaseAnimal {
+  id: string;
+  ownerId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  owner: {
+    id: string;
+    email: string;
+    fullName: string | null;
+  };
+}
+
+type CreateAnimalData = BaseAnimal;
+
+export class AnimalService extends PrismaService {
   /**
    * Create a new animal
    */
-  async createAnimal(data: Partial<IAnimal>, userId: string): Promise<IAnimal> {
-    const animal = await this.create({
-      ...data,
-      owner: new Types.ObjectId(userId),
-    });
-    return animal;
+  async createAnimal(
+    data: CreateAnimalData,
+    userId: string
+  ): Promise<AnimalWithOwner> {
+    try {
+      return await this.prisma.animal.create({
+        data: {
+          ...data,
+          owner: {
+            connect: { id: userId }
+          },
+          scores: data.scores || {
+            movement: 0,
+            conformation: 0,
+            muscleDevelopment: 0,
+            breedCharacteristics: 0
+          }
+        },
+        include: { owner: true }
+      });
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   /**
    * Get animals owned by a user
    */
-  async getUserAnimals(userId: string, query: any = {}): Promise<IAnimal[]> {
-    return this.find({
-      owner: new Types.ObjectId(userId),
-      ...query,
-    });
+  async getUserAnimals(
+    userId: string,
+    query: Partial<CreateAnimalData> = {}
+  ): Promise<AnimalWithOwner[]> {
+    try {
+      return await this.prisma.animal.findMany({
+        where: {
+          ownerId: userId,
+          ...this.buildWhereClause(query)
+        },
+        include: { owner: true }
+      });
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   /**
    * Get an animal by ID and verify ownership
    */
-  async getAnimalById(animalId: string, userId: string): Promise<IAnimal> {
-    const animal = await this.findById(animalId);
-    if (!animal) {
-      throw new ApiError(404, 'ANIMAL_NOT_FOUND', 'Animal not found');
-    }
+  async getAnimalById(animalId: string, userId: string): Promise<AnimalWithOwner> {
+    try {
+      const animal = await this.prisma.animal.findUnique({
+        where: { id: animalId },
+        include: { owner: true }
+      });
 
-    if (animal.owner.toString() !== userId) {
-      throw new ApiError(403, 'FORBIDDEN', 'You do not have access to this animal');
-    }
+      if (!animal) {
+        throw new ApiError(404, 'ANIMAL_NOT_FOUND', 'Animal not found');
+      }
 
-    return animal;
+      if (animal.ownerId !== userId) {
+        throw new ApiError(403, 'FORBIDDEN', 'You do not have access to this animal');
+      }
+
+      return animal as AnimalWithOwner;
+    } catch (error) {
+      this.handleError(error);
+    }
   }
 
   /**
    * Update an animal
    */
-  async updateAnimal(animalId: string, userId: string, data: Partial<IAnimal>): Promise<IAnimal> {
-    const animal = await this.getAnimalById(animalId, userId);
+  async updateAnimal(
+    animalId: string,
+    userId: string,
+    data: Partial<CreateAnimalData>
+  ): Promise<AnimalWithOwner> {
+    await this.getAnimalById(animalId, userId);
 
-    // Remove owner from update data for security
-    const { owner, ...updateData } = data;
-
-    const updatedAnimal = await this.update(animalId, updateData);
-    if (!updatedAnimal) {
-      throw new ApiError(404, 'ANIMAL_NOT_FOUND', 'Animal not found');
+    try {
+      return await this.prisma.animal.update({
+        where: { id: animalId },
+        data,
+        include: { owner: true }
+      });
+    } catch (error) {
+      this.handleError(error);
     }
-
-    return updatedAnimal;
   }
 
   /**
    * Delete an animal
    */
   async deleteAnimal(animalId: string, userId: string): Promise<void> {
-    const animal = await this.getAnimalById(animalId, userId);
-    
-    const deletedAnimal = await this.delete(animalId);
-    if (!deletedAnimal) {
-      throw new ApiError(404, 'ANIMAL_NOT_FOUND', 'Animal not found');
+    await this.getAnimalById(animalId, userId);
+
+    try {
+      await this.prisma.animal.delete({
+        where: { id: animalId }
+      });
+    } catch (error) {
+      this.handleError(error);
     }
   }
 
@@ -85,36 +146,17 @@ export class AnimalService extends BaseService<IAnimal> {
     minScore?: number;
     maxScore?: number;
     owner?: string;
-  }): Promise<IAnimal[]> {
-    const query: any = {};
+  }): Promise<AnimalWithOwner[]> {
+    try {
+      const where = this.buildWhereClause(criteria);
 
-    if (criteria.breed) {
-      query.breed = criteria.breed;
+      return await this.prisma.animal.findMany({
+        where,
+        include: { owner: true }
+      });
+    } catch (error) {
+      this.handleError(error);
     }
-
-    if (criteria.category) {
-      query.category = criteria.category;
-    }
-
-    if (criteria.region) {
-      query.region = criteria.region;
-    }
-
-    if (criteria.owner) {
-      query.owner = new Types.ObjectId(criteria.owner);
-    }
-
-    if (criteria.minScore || criteria.maxScore) {
-      query['scores.average'] = {};
-      if (criteria.minScore) {
-        query['scores.average'].$gte = criteria.minScore;
-      }
-      if (criteria.maxScore) {
-        query['scores.average'].$lte = criteria.maxScore;
-      }
-    }
-
-    return this.find(query);
   }
 
   /**
@@ -126,36 +168,69 @@ export class AnimalService extends BaseService<IAnimal> {
     byCategory: Record<string, number>;
     averageScore: number;
   }> {
-    const animals = await this.getUserAnimals(userId);
+    try {
+      const animals = await this.prisma.animal.findMany({
+        where: { ownerId: userId },
+        include: { owner: true }
+      });
 
-    const stats = {
-      total: animals.length,
-      byBreed: {} as Record<string, number>,
-      byCategory: {} as Record<string, number>,
-      averageScore: 0,
-    };
+      const stats = {
+        total: animals.length,
+        byBreed: {} as Record<string, number>,
+        byCategory: {} as Record<string, number>,
+        averageScore: 0,
+      };
 
-    let totalScore = 0;
-    let scoreCount = 0;
+      let totalScore = 0;
+      let scoreCount = 0;
 
-    animals.forEach(animal => {
-      // Count by breed
-      stats.byBreed[animal.breed] = (stats.byBreed[animal.breed] || 0) + 1;
+      animals.forEach((animal: AnimalWithOwner) => {
+        // Count by breed
+        stats.byBreed[animal.breed] = (stats.byBreed[animal.breed] || 0) + 1;
 
-      // Count by category
-      stats.byCategory[animal.category] = (stats.byCategory[animal.category] || 0) + 1;
+        // Count by category
+        stats.byCategory[animal.category] = (stats.byCategory[animal.category] || 0) + 1;
 
-      // Calculate average score
-      const scores = Object.values(animal.scores);
-      if (scores.length > 0) {
-        totalScore += scores.reduce((a, b) => a + b, 0) / scores.length;
-        scoreCount++;
-      }
-    });
+        // Calculate average score
+        const scores = animal.scores as Scores;
+        if (scores) {
+          const scoreValues = Object.values(scores);
+          totalScore += scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length;
+          scoreCount++;
+        }
+      });
 
-    stats.averageScore = scoreCount > 0 ? totalScore / scoreCount : 0;
+      stats.averageScore = scoreCount > 0 ? totalScore / scoreCount : 0;
 
-    return stats;
+      return stats;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  /**
+   * Build where clause for Prisma queries
+   */
+  private buildWhereClause(criteria: Record<string, any>) {
+    const where: Record<string, any> = {};
+
+    if (criteria.breed) {
+      where.breed = criteria.breed;
+    }
+
+    if (criteria.category) {
+      where.category = criteria.category;
+    }
+
+    if (criteria.region) {
+      where.region = criteria.region;
+    }
+
+    if (criteria.owner) {
+      where.ownerId = criteria.owner;
+    }
+
+    return where;
   }
 }
 
