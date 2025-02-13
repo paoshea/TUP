@@ -211,21 +211,21 @@ import path from 'path';
 
 ## Next Steps
 
-### 1. Setup API Routes (1-2 days)
+### 1. Setup API Routes 
 - [ ] Create `/api/ai/code` endpoint
 - [ ] Implement request validation
 - [ ] Set up error handling
 - [ ] Add authentication middleware
 - [ ] Configure CORS headers
 
-### 2. Implement Services (2-3 days)
+### 2. Implement Services 
 - [ ] Create `codeAgent.service.ts`
 - [ ] Implement singleton pattern
 - [ ] Add code processing methods
 - [ ] Set up file system operations
 - [ ] Add error handling and logging
 
-### 3. Create UI Components (2-3 days)
+### 3. Create UI Components 
 - [ ] Add new "Agent" page to Dashboard navigation
 - [ ] Create `frontend/app/agent/page.tsx`
 - [ ] Implement CodeAgent component
@@ -233,13 +233,13 @@ import path from 'path';
 - [ ] Create result display component
 - [ ] Add loading and error states
 
-### 4. Dashboard Integration (1 day)
+### 4. Dashboard Integration 
 - [ ] Update `components/Dashboard.tsx`
 - [ ] Add Agent navigation item
 - [ ] Create agent icon
 - [ ] Update routing configuration
 
-### 5. Testing and Documentation (2-3 days)
+### 5. Testing and Documentation 
 - [ ] Write unit tests for API routes
 - [ ] Test service methods
 - [ ] Add component tests
@@ -247,21 +247,19 @@ import path from 'path';
 - [ ] Add API documentation
 - [ ] Create usage examples
 
-### 6. Security and Performance (1-2 days)
+### 6. Security and Performance 
 - [ ] Implement rate limiting
 - [ ] Add request validation
 - [ ] Set up error boundaries
 - [ ] Optimize file operations
 - [ ] Add performance monitoring
 
-### 7. Final Steps (1 day)
+### 7. Final Steps
 - [ ] Conduct end-to-end testing
 - [ ] Review error handling
 - [ ] Update environment variables
 - [ ] Deploy changes
 - [ ] Monitor initial usage
-
-Total Estimated Time: 10-15 days
 
 ### Implementation Order:
 1. Start with API routes to establish backend functionality
