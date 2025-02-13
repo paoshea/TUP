@@ -157,15 +157,15 @@ Features:
    - [ ] Voice commands
    - [ ] Response modes
 
-### Medium Priority
-
-1. Code Analysis
+3. Code Analysis
    - [ ] Data generation
    - [ ] Validation tools
    - [ ] Metrics display
    - [ ] Auto-fix features
 
-2. Learning Center
+### Medium Priority
+
+1. Learning Center
    - [ ] Glossary system
    - [ ] Term management
    - [ ] Search functionality
