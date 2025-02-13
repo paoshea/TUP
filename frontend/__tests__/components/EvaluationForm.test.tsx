@@ -43,7 +43,7 @@ describe('EvaluationForm', () => {
     );
 
     // Find score inputs
-    const movementSlider = screen.getByRole('slider', { name: /Movement/i });
+    const movementSlider = screen.getByRole('slider', { name: /Movement/i, hidden: true });
     const conformationSlider = screen.getByRole('slider', { name: /Conformation/i });
 
     // Change scores

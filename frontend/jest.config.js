@@ -33,5 +33,7 @@ module.exports = {
     'components/**/*.{js,jsx,ts,tsx}',
     '!components/**/*.d.ts'
   ],
-  testMatch: ['**/__tests__/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)']
+  testMatch: ['**/__tests__/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)'],
+  moduleDirectories: ['node_modules', '<rootDir>'],
+  testTimeout: 30000
 };

@@ -14,10 +14,10 @@ function AllTheProviders({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function render(ui: React.ReactElement, options: CustomRenderOptions = {}) {
+function render(ui: React.ReactElement, options: CustomRenderOptions = {}) {
   const { wrapper: Wrapper, ...restOptions } = options;
 
-  function CustomWrapper({ children }: { children: React.ReactNode }) {
+  const Providers = ({ children }: { children: React.ReactNode }) => {
     return Wrapper ? (
       <AllTheProviders>
         <Wrapper>{children}</Wrapper>
@@ -25,22 +25,11 @@ export function render(ui: React.ReactElement, options: CustomRenderOptions = {}
     ) : (
       <AllTheProviders>{children}</AllTheProviders>
     );
-  }
-
-  const result = rtlRender(ui, {
-    ...restOptions,
-    wrapper: CustomWrapper,
-  });
-
-  return {
-    ...result,
-    rerender: (rerenderUi: React.ReactElement) => {
-      result.rerender(
-        <CustomWrapper>{rerenderUi}</CustomWrapper>
-      );
-    },
   };
+
+  return rtlRender(ui, { wrapper: Providers, ...restOptions });
 }
 
 // Re-export everything
 export * from '@testing-library/react';
+export { render };

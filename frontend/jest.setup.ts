@@ -8,14 +8,43 @@ class ResizeObserver {
   disconnect() {}
 }
 
-window.ResizeObserver = ResizeObserver;
+global.ResizeObserver = ResizeObserver;
+
+// Mock IntersectionObserver
+const mockIntersectionObserver = jest.fn();
+mockIntersectionObserver.mockReturnValue({
+  observe: () => null,
+  unobserve: () => null,
+  disconnect: () => null,
+  root: null,
+  rootMargin: '',
+  thresholds: [],
+  takeRecords: () => []
+});
+
+window.IntersectionObserver = mockIntersectionObserver;
+
+// Mock window.matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: jest.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  })),
+});
 
 // Mock lucide-react icons
 jest.mock('lucide-react', () => ({
-  Camera: function MockCamera() { return React.createElement('div', { 'data-testid': 'camera-icon' }); },
-  Upload: function MockUpload() { return React.createElement('div', { 'data-testid': 'upload-icon' }); },
-  X: function MockX() { return React.createElement('div', { 'data-testid': 'x-icon' }); },
-  Plus: function MockPlus() { return React.createElement('div', { 'data-testid': 'plus-icon' }); },
+  Camera: () => React.createElement('div', { 'data-testid': 'camera-icon' }),
+  Upload: () => React.createElement('div', { 'data-testid': 'upload-icon' }),
+  X: () => React.createElement('div', { 'data-testid': 'x-icon' }),
+  Plus: () => React.createElement('div', { 'data-testid': 'plus-icon' }),
 }));
 
 // Mock next/image
