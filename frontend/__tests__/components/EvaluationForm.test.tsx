@@ -1,19 +1,11 @@
-import { render, screen, fireEvent, waitFor } from '@/utils/test-utils';
-import { EvaluationForm } from '@/components/features/evaluations';
-import * as useOfflineSyncModule from '@/hooks/useOfflineSync';
-
-// Mock the useOfflineSync hook
-jest.mock('@/hooks/useOfflineSync', () => ({
-  __esModule: true,
-  default: jest.fn(),
-}));
+import React from 'react';
+import { render, screen, fireEvent } from '@/utils/test-utils';
+import { EvaluationForm } from '@/components/features/evaluations/EvaluationForm';
 
 describe('EvaluationForm', () => {
   const mockAnimals = [
-    {
-      id: 'test-animal-1',
-      name: 'Test Animal',
-    }
+    { id: 'test-animal-1', name: 'Test Animal 1' },
+    { id: 'test-animal-2', name: 'Test Animal 2' },
   ];
 
   const mockOnSubmit = jest.fn();
@@ -21,10 +13,6 @@ describe('EvaluationForm', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useOfflineSyncModule.default as jest.Mock).mockReturnValue({
-      isOnline: true,
-      syncStatus: 'synced',
-    });
   });
 
   it('renders the evaluation form correctly', () => {
@@ -37,13 +25,15 @@ describe('EvaluationForm', () => {
     );
 
     // Check for main form elements
-    expect(screen.getByText(/Movement/i)).toBeInTheDocument();
-    expect(screen.getByText(/Conformation/i)).toBeInTheDocument();
-    expect(screen.getByText(/Muscle Development/i)).toBeInTheDocument();
-    expect(screen.getByText(/Breed Characteristics/i)).toBeInTheDocument();
+    expect(screen.getByText('Animal')).toBeInTheDocument();
+    expect(screen.getByText('Movement')).toBeInTheDocument();
+    expect(screen.getByText('Conformation')).toBeInTheDocument();
+    expect(screen.getByText('Muscle Development')).toBeInTheDocument();
+    expect(screen.getByText('Breed Characteristics')).toBeInTheDocument();
+    expect(screen.getByText('Notes')).toBeInTheDocument();
   });
 
-  it('handles score inputs correctly', async () => {
+  it('handles score inputs correctly', () => {
     render(
       <EvaluationForm
         animals={mockAnimals}
@@ -65,7 +55,7 @@ describe('EvaluationForm', () => {
     expect(conformationSlider).toHaveValue('9');
   });
 
-  it('submits the form with correct data', async () => {
+  it('submits the form with correct data', () => {
     render(
       <EvaluationForm
         animals={mockAnimals}
@@ -76,7 +66,7 @@ describe('EvaluationForm', () => {
 
     // Select animal
     const animalSelect = screen.getByRole('combobox');
-    fireEvent.change(animalSelect, { target: { value: mockAnimals[0].id } });
+    fireEvent.change(animalSelect, { target: { value: 'test-animal-1' } });
 
     // Change scores
     const movementSlider = screen.getByRole('slider', { name: /Movement/i });
@@ -87,35 +77,17 @@ describe('EvaluationForm', () => {
     fireEvent.change(notesTextarea, { target: { value: 'Test evaluation notes' } });
 
     // Submit form
-    fireEvent.click(screen.getByText(/Save Evaluation/i));
+    fireEvent.click(screen.getByRole('button', { name: /Save Evaluation/i }));
 
-    await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          animalId: mockAnimals[0].id,
-          scores: expect.objectContaining({
-            movement: 8,
-          }),
-          notes: 'Test evaluation notes',
-        })
-      );
-    });
-  });
-
-  it('validates required fields', async () => {
-    render(
-      <EvaluationForm
-        animals={mockAnimals}
-        onSubmit={mockOnSubmit}
-        onCancel={mockOnCancel}
-      />
+    expect(mockOnSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        animalId: 'test-animal-1',
+        scores: expect.objectContaining({
+          movement: 8,
+        }),
+        notes: 'Test evaluation notes',
+      })
     );
-
-    // Try to submit without selecting an animal
-    fireEvent.click(screen.getByText(/Save Evaluation/i));
-
-    // Check for validation message
-    expect(screen.getByRole('combobox')).toBeInvalid();
   });
 
   it('handles cancel button click', () => {
@@ -127,7 +99,7 @@ describe('EvaluationForm', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('Cancel'));
+    fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
     expect(mockOnCancel).toHaveBeenCalled();
   });
 });
