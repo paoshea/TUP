@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { type FC } from 'react';
 
-const LivestockSelector = () => {
+interface LivestockSelectorProps {}
+
+const LivestockSelector: FC<LivestockSelectorProps> = () => {
   return (
     <div>
       <h2>Select Livestock</h2>

@@ -2,45 +2,59 @@ import * as animal from './AnimalController';
 import * as auth from './AuthController';
 import * as evaluation from './EvaluationController';
 import * as show from './ShowController';
+import * as notification from './NotificationController';
 
-export const animalController = {
+// Individual controller exports for routes
+export const animalController = animal;
+export const authController = auth;
+export const evaluationController = evaluation;
+export const showController = show;
+export const notificationController = notification;
+
+// Combined controllers object for convenience
+export const controllers = {
+  // Animal endpoints
   createAnimal: animal.createAnimal,
-  getAnimals: animal.getAnimals,
   getAnimal: animal.getAnimal,
   updateAnimal: animal.updateAnimal,
   deleteAnimal: animal.deleteAnimal,
+  getAnimals: animal.getAnimals,
   searchAnimals: animal.searchAnimals,
-  getAnimalStats: animal.getAnimalStats
-};
+  getStats: animal.getStats,
 
-export const authController = {
+  // Auth endpoints
   signUp: auth.signUp,
   signIn: auth.signIn,
   verifyToken: auth.verifyToken,
   changePassword: auth.changePassword,
   requestPasswordReset: auth.requestPasswordReset,
-  resetPassword: auth.resetPassword
-};
+  resetPassword: auth.resetPassword,
 
-export const evaluationController = {
+  // Evaluation endpoints
   createEvaluation: evaluation.createEvaluation,
-  getAnimalEvaluations: evaluation.getAnimalEvaluations,
-  getEvaluatorEvaluations: evaluation.getEvaluatorEvaluations,
   getEvaluation: evaluation.getEvaluation,
   updateEvaluation: evaluation.updateEvaluation,
   deleteEvaluation: evaluation.deleteEvaluation,
-  getEvaluationStats: evaluation.getEvaluationStats
-};
+  getAnimalEvaluations: evaluation.getAnimalEvaluations,
+  getEvaluatorEvaluations: evaluation.getEvaluatorEvaluations,
+  getEvaluationStats: evaluation.getEvaluationStats,
 
-export const showController = {
+  // Show endpoints
   createShow: show.createShow,
-  getOrganizedShows: show.getOrganizedShows,
-  getUpcomingShows: show.getUpcomingShows,
   getShow: show.getShow,
   updateShow: show.updateShow,
   deleteShow: show.deleteShow,
+  getOrganizedShows: show.getOrganizedShows,
+  getUpcomingShows: show.getUpcomingShows,
   createShowEntry: show.createShowEntry,
   getShowEntries: show.getShowEntries,
   recordShowResult: show.recordShowResult,
-  getShowStats: show.getShowStats
+  getShowStats: show.getShowStats,
+
+  // Notification endpoints
+  getUserNotifications: notification.getUserNotifications,
+  markNotificationAsRead: notification.markNotificationAsRead,
+  processPendingNotifications: notification.processPendingNotifications,
+  cleanupNotifications: notification.cleanupNotifications,
+  registerPushToken: notification.registerPushToken
 };

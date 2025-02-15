@@ -2,9 +2,12 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import LivestockSelector from '../src/components/LivestockSelector';
+import { type FC } from 'react';
 
-test('renders LivestockSelector component', () => {
-  render(<LivestockSelector />);
-  const linkElement = screen.getByText(/Select Livestock/i);
-  expect(linkElement).toBeInTheDocument();
+describe('LivestockSelector', () => {
+  it('renders LivestockSelector component', () => {
+    render(<LivestockSelector />);
+    const heading = screen.getByText(/Select Livestock/i);
+    expect(heading).toBeInTheDocument();
+  });
 });

@@ -3,6 +3,7 @@ import { showService } from '../services';
 import { asyncHandler } from '../utils/asyncHandler';
 import { ApiError } from '../utils/apiResponse';
 import { RequestWithUser } from '../types';
+import { CreateShowEntryInput } from '../types/show';
 
 export const createShow = asyncHandler(async (req: RequestWithUser, res: Response) => {
   const organizerId = req.user!.id;
@@ -51,15 +52,18 @@ export const deleteShow = asyncHandler(async (req: RequestWithUser, res: Respons
 export const createShowEntry = asyncHandler(async (req: RequestWithUser, res: Response) => {
   const userId = req.user!.id;
   const { showId } = req.params;
-  const { animalId, category } = req.body;
+  const entryData: CreateShowEntryInput = {
+    animalId: req.body.animalId,
+    category: req.body.category
+  };
 
-  const entry = await showService.createEntry(showId, animalId, userId, category);
+  const entry = await showService.createShowEntry(showId, entryData, userId);
   res.status(201).json({ success: true, data: entry });
 });
 
 export const getShowEntries = asyncHandler(async (req: RequestWithUser, res: Response) => {
   const { showId } = req.params;
-  const entries = await showService.getShowEntries(showId);
+  const entries = await showService.getEntries(showId);
   res.json({ success: true, data: entries });
 });
 
@@ -72,7 +76,7 @@ export const recordShowResult = asyncHandler(async (req: RequestWithUser, res: R
     throw new ApiError(403, 'FORBIDDEN', 'Only administrators can record show results');
   }
 
-  const result = await showService.recordResult(entryId, placement, points, notes);
+  const result = await showService.recordShowResult(entryId, placement, points, notes);
   res.status(201).json({ success: true, data: result });
 });
 

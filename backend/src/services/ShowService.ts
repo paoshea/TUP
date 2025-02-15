@@ -42,10 +42,10 @@ export class ShowService extends PrismaService {
             categories: JSON.stringify(data.categories),
             organizer: {
               connect: { id: organizerId }
-            }
+            },
           },
           include: {
-            organizer: true
+            organizer: true,
           }
         });
 
@@ -283,6 +283,34 @@ export class ShowService extends PrismaService {
       });
 
       return stats;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  /**
+   * Get entries for a show
+   */
+  async getEntries(showId: string): Promise<ShowEntry[]> {
+    try {
+      const entries = await this.showEntry.findMany({
+        where: { showId },
+        include: {
+          animal: true,
+        }
+      });
+
+      return entries.map(entry => {
+        return {
+        id: entry.id,
+        entryNumber: entry.entryNumber,
+        category: entry.category,
+        animal: {
+          id: entry.animal.id,
+          name: entry.animal.name
+        },
+        results: []
+      }});
     } catch (error) {
       this.handleError(error);
     }
