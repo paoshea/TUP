@@ -2,15 +2,15 @@
 
 import React, { useEffect, useState } from 'react';
 import { mockStore } from '@/lib/mock/store';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Card } from '../ui/card';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from './ui/select';
-import { Progress } from './ui/progress';
+} from '../ui/select';
+import { Progress } from '../ui/progress';
 import {
   Map,
   BarChart3,
@@ -182,6 +182,30 @@ export function RegionalInsights() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function CardHeader({ children, className = '', ...props }: { children: React.ReactNode, className?: string }) {
+  return (
+    <div className={`flex flex-row items-center justify-between space-y-0 pb-2 ${className}`} {...props}>
+      {children}
+    </div>
+  );
+}
+
+function CardTitle({ children, className = '', ...props }: { children: React.ReactNode, className?: string }) {
+  return (
+    <div className={`text-sm font-medium ${className}`} {...props}>
+      {children}
+    </div>
+  );
+}
+
+function CardContent({ children, className = '', ...props }: { children: React.ReactNode, className?: string }) {
+  return (
+    <div className={`p-4 ${className}`} {...props}>
+      {children}
     </div>
   );
 }

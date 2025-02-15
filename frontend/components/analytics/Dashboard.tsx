@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Progress } from './ui/progress';
+import { Card } from '../ui/card';
+import { Button } from '../ui/button';
+import { Progress } from '../ui/progress';
 import {
   Calendar,
   ClipboardList,
@@ -17,7 +17,7 @@ import {
   Rocket
 } from 'lucide-react';
 import Link from 'next/link';
-import { WizardPhil } from './WizardPhil';
+import { WizardPhil } from '../features/ai/WizardPhil';
 
 export function Dashboard() {
   const [isWizardPhilOpen, setIsWizardPhilOpen] = useState(false);
@@ -163,6 +163,30 @@ export function Dashboard() {
 
       {/* WizardPhil Component */}
       <WizardPhil isOpen={isWizardPhilOpen} onOpenChange={setIsWizardPhilOpen} />
+    </div>
+  );
+}
+
+function CardHeader({ children, className = '', ...props }) {
+  return (
+    <div className={`flex flex-row items-center justify-between space-y-0 pb-2 ${className}`} {...props}>
+      {children}
+    </div>
+  );
+}
+
+function CardTitle({ children, className = '', ...props }) {
+  return (
+    <div className={`text-sm font-medium ${className}`} {...props}>
+      {children}
+    </div>
+  );
+}
+
+function CardContent({ children, className = '', ...props }) {
+  return (
+    <div className={`p-4 ${className}`} {...props}>
+      {children}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Header } from '@/components/layout/Header';
+import { Header } from '@/components/layout/Navigation/Header';
 import { Footer } from '@/components/layout/Footer';
 import './globals.css';
 
