@@ -26,7 +26,6 @@ export default function SignUpClient() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrors({});
-    setIsLoading(true);
 
     // Validate form
     const newErrors: Record<string, string> = {};
@@ -42,10 +41,10 @@ export default function SignUpClient() {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      setIsLoading(false);
       return;
     }
     
+    setIsLoading(true);
     // Proceed with signup
     try {
       await signup({
@@ -83,6 +82,13 @@ export default function SignUpClient() {
       });
     }
   };
+
+  const isValid = 
+    form.email &&
+    form.name &&
+    form.password &&
+    form.password.length >= 8 &&
+    form.password === form.confirmPassword;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -213,7 +219,7 @@ export default function SignUpClient() {
             <Button
               type="submit"
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-              disabled={isLoading}
+              disabled={isLoading || !isValid}
             >
               {isLoading ? 'Creating account...' : 'Create account'}
             </Button>
