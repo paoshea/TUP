@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Card } from '../ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
-import { Progress } from '../ui/progress';
 import {
   Calendar,
   ClipboardList,
@@ -109,9 +108,9 @@ export function Dashboard() {
                 <Calendar className="h-5 w-5 text-blue-500" />
                 Upcoming Shows
               </CardTitle>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/shows">View All</Link>
-              </Button>
+              <Link href="/shows" className="text-sm text-muted-foreground hover:text-primary">
+                View All
+              </Link>
             </div>
           </CardHeader>
           <CardContent>
@@ -130,9 +129,9 @@ export function Dashboard() {
                 <Activity className="h-5 w-5 text-green-500" />
                 Recent Animals
               </CardTitle>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/animals">View All</Link>
-              </Button>
+              <Link href="/animals" className="text-sm text-muted-foreground hover:text-primary">
+                View All
+              </Link>
             </div>
           </CardHeader>
           <CardContent>
@@ -163,30 +162,6 @@ export function Dashboard() {
 
       {/* WizardPhil Component */}
       <WizardPhil isOpen={isWizardPhilOpen} onOpenChange={setIsWizardPhilOpen} />
-    </div>
-  );
-}
-
-function CardHeader({ children, className = '', ...props }) {
-  return (
-    <div className={`flex flex-row items-center justify-between space-y-0 pb-2 ${className}`} {...props}>
-      {children}
-    </div>
-  );
-}
-
-function CardTitle({ children, className = '', ...props }) {
-  return (
-    <div className={`text-sm font-medium ${className}`} {...props}>
-      {children}
-    </div>
-  );
-}
-
-function CardContent({ children, className = '', ...props }) {
-  return (
-    <div className={`p-4 ${className}`} {...props}>
-      {children}
     </div>
   );
 }

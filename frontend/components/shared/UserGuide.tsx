@@ -1,15 +1,9 @@
 "use client";
 
 import React from 'react';
-import { Book, Camera, Map, Settings, HelpCircle, Info, CheckSquare } from 'lucide-react';
-import { Card, CardHeader, CardContent } from './ui/card';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from './ui/accordion';
-import { Button } from './ui/button';
+import { Book, Camera, Map, Settings, HelpCircle, Info, CheckSquare, ChevronDown } from 'lucide-react';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 interface GuideSection {
   id: string;
@@ -20,6 +14,8 @@ interface GuideSection {
 }
 
 export function UserGuide() {
+  const [openSection, setOpenSection] = React.useState<string | null>(null);
+
   const guideSections: GuideSection[] = [
     {
       id: 'getting-started',
@@ -167,44 +163,50 @@ export function UserGuide() {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <Accordion type="single" collapsible className="w-full">
+        <div className="w-full space-y-2">
           {guideSections.map((section) => (
-            <AccordionItem key={section.id} value={section.id}>
-              <AccordionTrigger>
-                <div className="flex items-center gap-3">
+            <div key={section.id} className="border-b">
+              <button
+                onClick={() => setOpenSection(openSection === section.id ? null : section.id)}
+                className="w-full flex items-center justify-between py-4 font-medium transition-all hover:underline"
+              >
+                <div className="flex items-center gap-3 text-left">
                   <span className="text-primary">{section.icon}</span>
                   <span>{section.title}</span>
                 </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="pt-2 pb-4">
-                  <Card>
-                    <CardContent className="pt-6">
-                      {section.content}
-                    </CardContent>
-                  </Card>
+                <ChevronDown 
+                  className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
+                    openSection === section.id ? 'rotate-180' : ''
+                  }`} 
+                />
+              </button>
+              {openSection === section.id && (
+                <div className="pb-4 pt-0">
+                  <div className="pt-2 pb-4">
+                    <Card>
+                      <CardContent className="pt-6">
+                        {section.content}
+                      </CardContent>
+                    </Card>
 
-                  {section.subsections && (
-                    <div className="mt-4 space-y-4">
-                      {section.subsections.map((subsection) => (
-                        <Card key={subsection.title}>
-                          <CardContent className="pt-4">
-                            <h4 className="font-medium mb-1">
-                              {subsection.title}
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {subsection.content}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                    {section.subsections && (
+                      <div className="mt-4 space-y-4">
+                        {section.subsections.map((subsection) => (
+                          <Card key={subsection.title}>
+                            <CardContent className="pt-4">
+                              <h4 className="font-medium mb-1">{subsection.title}</h4>
+                              <p className="text-sm text-muted-foreground">{subsection.content}</p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </AccordionContent>
-            </AccordionItem>
+              )}
+            </div>
           ))}
-        </Accordion>
+        </div>
 
         <div className="flex justify-center">
           <Button variant="outline" className="gap-2">

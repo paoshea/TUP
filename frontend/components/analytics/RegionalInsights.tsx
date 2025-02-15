@@ -2,15 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { mockStore } from '@/lib/mock/store';
-import { Card } from '../ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
-import { Progress } from '../ui/progress';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import {
   Map,
   BarChart3,
@@ -52,24 +44,19 @@ export function RegionalInsights() {
                 Analyze breed performance and trends by region
               </p>
             </div>
-            <Select
+            <select
               value={selectedRegion.name}
-              onValueChange={(value) => {
+              onChange={(e) => {
+                const value = e.target.value;
                 const region = regions.find(r => r.name === value);
                 if (region) setSelectedRegion(region);
               }}
+              className="w-[180px] h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select region" />
-              </SelectTrigger>
-              <SelectContent>
-                {regions.map(region => (
-                  <SelectItem key={region.name} value={region.name}>
-                    {region.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {regions.map(region => (
+                <option key={region.name} value={region.name}>{region.name}</option>
+              ))}
+            </select>
           </div>
         </CardHeader>
         <CardContent>
@@ -167,7 +154,12 @@ export function RegionalInsights() {
                         {90 - index * 10}% success rate
                       </span>
                     </div>
-                    <Progress value={90 - index * 10} />
+                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+                      <div 
+                        className="h-full bg-primary transition-all" 
+                        style={{ width: `${90 - index * 10}%` }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -182,30 +174,6 @@ export function RegionalInsights() {
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
-}
-
-function CardHeader({ children, className = '', ...props }: { children: React.ReactNode, className?: string }) {
-  return (
-    <div className={`flex flex-row items-center justify-between space-y-0 pb-2 ${className}`} {...props}>
-      {children}
-    </div>
-  );
-}
-
-function CardTitle({ children, className = '', ...props }: { children: React.ReactNode, className?: string }) {
-  return (
-    <div className={`text-sm font-medium ${className}`} {...props}>
-      {children}
-    </div>
-  );
-}
-
-function CardContent({ children, className = '', ...props }: { children: React.ReactNode, className?: string }) {
-  return (
-    <div className={`p-4 ${className}`} {...props}>
-      {children}
     </div>
   );
 }

@@ -2,14 +2,8 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Camera, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PhotoGalleryProps {
@@ -89,42 +83,46 @@ export function PhotoGallery({ photos, onPhotosChange }: PhotoGalleryProps) {
           </div>
         )}
 
-        <Dialog open={!!selectedPhoto} onOpenChange={() => setSelectedPhoto(null)}>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Photo Preview</DialogTitle>
-            </DialogHeader>
-            <div className="relative aspect-video">
-              {selectedPhoto && (
+        {selectedPhoto && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-background rounded-lg p-4 max-w-4xl w-full mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Photo Preview</h3>
+                <button
+                  onClick={() => setSelectedPhoto(null)}
+                  className="p-1 rounded-full hover:bg-muted"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="relative aspect-video">
                 <Image
                   src={selectedPhoto}
                   alt="Preview"
                   fill
                   className="object-contain"
                 />
-              )}
-              <div className="absolute inset-0 flex items-center justify-between p-4">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleNavigate('prev')}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleNavigate('next')}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+                <div className="absolute inset-0 flex items-center justify-between p-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleNavigate('prev')}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleNavigate('next')}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
+              <p className="text-center text-sm text-muted-foreground mt-4">Photo {previewIndex + 1} of {photos.length}</p>
             </div>
-            <div className="text-center text-sm text-muted-foreground">
-              Photo {previewIndex + 1} of {photos.length}
-            </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

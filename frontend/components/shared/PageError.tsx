@@ -2,8 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Button } from './ui/button';
-import { Alert, AlertDescription } from './ui/alert';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface PageErrorProps {
   error: Error;

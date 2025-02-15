@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { cn } from "@/lib/utils";
 import { mockStore } from '@/lib/mock/store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import {
   Calendar,
   CheckSquare,
@@ -56,10 +55,6 @@ export function PreShowChecklist() {
 
   return (
     <Card>
-<Card>
-<Card>
-<Card>
-<Card>
   <CardHeader>
     <div className="flex items-center justify-between">
       <div className="space-y-1">
@@ -93,35 +88,33 @@ export function PreShowChecklist() {
       {/* Filter */}
       <div className="flex items-center space-x-2">
         <Filter className="h-4 w-4 text-muted-foreground" />
-        <Select value={filter} onValueChange={setFilter}>
-        <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter tasks" />
-        </SelectTrigger>
-        <SelectContent>
-            {categories.map(category => (
-                <SelectItem key={category.value} value={category.value}>
-                    {category.label}
-                </SelectItem>
-            ))}
-        </SelectContent>
-        </Select>
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="w-[180px] h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          {categories.map((category) => (
+            <option key={category.value} value={category.value}>{category.label}</option>
+          ))}
+        </select>
       </div>
 
       {/* Checklist Items */}
       <div className="space-y-4">
         {filteredItems.map(item => (
           <div
-            key={item.id}
+            key={`item-${item.id}`}
             className="flex items-start space-x-4 p-4 rounded-lg border bg-card"
           >
-            <Checkbox
-              checked={item.completed}
-              onCheckedChange={() => handleToggleItem(item.id)}
-            />
+            <input
+              type="checkbox"
+              checked={item.completed || false}
+              onChange={() => handleToggleItem(item.id)}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
             <div className="flex-1 space-y-1">
-              <p className={`text-sm font-medium ${
-                item.completed ? 'line-through text-muted-foreground' : ''
-              }`}>
+              <p className={cn("text-sm font-medium", 
+                item.completed && "line-through text-muted-foreground"
+              )}>
                 {item.text}
               </p>
               <div className="flex items-center space-x-4 text-xs text-muted-foreground">
@@ -154,10 +147,6 @@ export function PreShowChecklist() {
       </div>
     </div>
   </CardContent>
-</Card>
-</Card>
-</Card>
-</Card>
     </Card>
   );
 }
