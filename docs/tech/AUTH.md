@@ -54,28 +54,73 @@ export async function POST(req: Request) {
 
 #### Environment Setup
 
+Our system uses a dual-database approach for different purposes:
+
+#### 1. MongoDB Atlas (Production Database)
+- **Location**: Configuration in `frontend/.env.local`
+- **Purpose**: Primary database for the frontend, handling:
+  - User authentication
+  - User profiles
+  - Session management
+  - Real-time data synchronization
+- **Connection String**: Production MongoDB URI stored securely in frontend/.env.local
+
+#### 2. PostgreSQL (Development Database)
+- **Location**: Configuration in root `.env`
+- **Purpose**: Backend development database, handling:
+  - Structured data modeling
+  - Complex queries and relationships
+  - Data integrity and transactions
+  - Development and testing environment
+
 1. **Root Directory (.env)**
 ```env
 # .env
-NODE_ENV=development
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/tup?retryWrites=true&w=majority
-JWT_SECRET=your-secret-key
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_NAME=tup-livestock
 ```
 
 2. **Frontend (.env.local)**
 ```env
 # frontend/.env.local
+MONGODB_URI=mongodb+srv://<username>:<password>@tupcluster50.oogbg.mongodb.net/?retryWrites=true&w=majority&appName=TUPCluster50
 NEXT_PUBLIC_API_URL=http://localhost:3000/api
 NEXT_PUBLIC_APP_ENV=development
+
+# MongoDB Configuration
+MONGODB_DB_NAME=livestock
+MONGODB_MAX_POOL_SIZE=10
+MONGODB_CONNECT_TIMEOUT=10000
 ```
 
-3. **Backend (.env.local)**
+### PostgreSQL Development Setup
+
+#### Environment Configuration
 ```env
-# backend/.env.local
-PORT=5000
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/tup?retryWrites=true&w=majority
-JWT_SECRET=your-secret-key
-CORS_ORIGIN=http://localhost:3000
+# root .env - PostgreSQL development settings
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_NAME=tup-livestock
+```
+
+#### Database Connection
+```typescript
+// backend/src/config/database.ts
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT || '5432'),
+  user: process.env.DB_USER,
+  database: process.env.DB_NAME,
+});
+
+export const query = async (text: string, params?: any[]) => {
+  return pool.query(text, params);
+};
 ```
 
 #### MongoDB Setup Steps

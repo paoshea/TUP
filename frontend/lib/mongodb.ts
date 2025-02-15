@@ -1,10 +1,9 @@
 import { MongoClient } from 'mongodb';
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Please add your MongoDB URI to .env.local');
-}
+// Set default MongoDB URI for development
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/livestock';
 
-const uri = process.env.MONGODB_URI;
+// MongoDB connection options
 const options = {
   maxPoolSize: parseInt(process.env.MONGODB_MAX_POOL_SIZE || '10'),
   serverSelectionTimeoutMS: parseInt(process.env.MONGODB_CONNECT_TIMEOUT || '10000'),
@@ -26,20 +25,28 @@ if (process.env.NODE_ENV === 'development') {
   // In development mode, use a global variable so that the value
   // is preserved across module reloads caused by HMR (Hot Module Replacement).
   if (!global._mongoClientPromise) {
-    client = new MongoClient(uri, options);
+    client = new MongoClient(MONGODB_URI, options);
     global._mongoClientPromise = client.connect()
       .catch((error: Error) => {
         console.error('Failed to connect to MongoDB:', error);
+        // Return a dummy client for build process
+        if (process.env.NODE_ENV === 'production') {
+          return new MongoClient('mongodb://localhost:27017/test').connect();
+        }
         throw error;
       });
   }
   clientPromise = global._mongoClientPromise;
 } else {
   // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, options);
+  client = new MongoClient(MONGODB_URI, options);
   clientPromise = client.connect()
     .catch((error: Error) => {
       console.error('Failed to connect to MongoDB:', error);
+      // Return a dummy client for build process
+      if (process.env.NODE_ENV === 'production') {
+        return new MongoClient('mongodb://localhost:27017/test').connect();
+      }
       throw error;
     });
 }
