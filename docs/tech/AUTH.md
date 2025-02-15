@@ -1,178 +1,354 @@
 # TUP Authentication System
 
-## Current Implementation
+## Implementation Guide
 
-### Overview
-The current authentication system uses local storage to maintain user data and session state. This allows for real user data collection while keeping authentication simple (any password works) during the initial development phase.
+### Local Storage Implementation
 
-### Components
+#### Setup Steps
 
-1. Local Storage Service
-   - Stores user profile data
-   - Maintains session state
-   - Handles data persistence
-   - Supports analytics tracking
-
-2. AuthContext
-   - Manages authentication state
-   - Provides user information
-   - Handles login/logout flow
-   - Supports protected routes
-
-3. Auth Pages
-   - Sign In: Verifies email exists
-   - Sign Up: Collects real user data
-   - Forgot Password: Placeholder for future implementation
-
-### Current Flow
-
-#### Sign Up
-1. User enters:
-   - Name (required) - [change to First name, Last name]
-   - Email (required)
-   - Farm name (required) - [change to optional]
-   - Location (required)  - [change to optional]
-   - Password (any value accepted)
-2. System:
-   - Validates required fields
-   - Creates user profile
-   - Stores data locally
-   - Initializes empty collections for:
-     * Animals
-     * Shows
-     * Evaluations
-
-#### Sign In
-1. User enters:
-   - Email
-   - Password
-2. System:
-   - Checks if email exists in local storage
-   - Accepts any password
-   - Loads user's stored data
-   - Initializes analytics tracking
-
-### Data Storage
-
-#### User Profile
+1. **Initialize Storage Service**
 ```typescript
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  farm: string;
-  location: string;
-  role: string;
-  memberSince: string;
-}
-```
-
-#### Collections
-```typescript
-// Stored separately in local storage
-{
-  animals: Animal[];
-  shows: Show[];
-  evaluations: Evaluation[];
-}
-```
-
-## Future Enhancements
-
-### Phase 1: MongoDB Integration
-- [ ] Set up MongoDB database
-- [ ] Create user schema
-- [ ] Implement data migration
-- [ ] Add sync functionality
-
-### Phase 2: Real Authentication
-- [ ] Add password hashing
-- [ ] Implement JWT tokens
-- [ ] Add session management
-- [ ] Enable password reset
-
-### Phase 3: Security Features
-- [ ] Add email verification
-- [ ] Implement 2FA
-- [ ] Add rate limiting
-- [ ] Enable account recovery
-
-## Implementation Notes
-
-### Local Storage Structure
-```typescript
-// Storage Keys
-const STORAGE_KEYS = {
-  USER: 'tup_user',
-  ANIMALS: 'tup_animals',
-  SHOWS: 'tup_shows',
-  EVALUATIONS: 'tup_evaluations',
+// services/storage.ts
+export const storage = {
+  setUser: (user: User) => {
+    localStorage.setItem('tup_user', JSON.stringify({
+      version: 1,
+      timestamp: Date.now(),
+      data: user
+    }));
+  },
+  getUser: (): User | null => {
+    const stored = localStorage.getItem('tup_user');
+    return stored ? JSON.parse(stored).data : null;
+  },
+  // ... other methods
 };
+```
 
-// Data Format
-interface StoredData<T> {
-  version: number;    // For data migrations
-  timestamp: number;  // Last update
-  data: T;           // Actual content
+2. **Configure AuthContext**
+```typescript
+// context/AuthContext.tsx
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  
+  useEffect(() => {
+    const storedUser = storage.getUser();
+    if (storedUser) setUser(storedUser);
+  }, []);
+  
+  // ... auth methods
 }
 ```
 
-### Analytics Integration
-- User actions tracked locally
-- Real-time dashboard updates
-- Performance metrics
-- Usage statistics
+3. **Setup Auth API Routes**
+```typescript
+// app/api/auth/signup/route.ts
+export async function POST(req: Request) {
+  const data = await req.json();
+  // Validate and store user
+  return Response.json({ success: true });
+}
+```
 
-### Data Persistence
-- Automatic saving
-- Version control
-- Conflict resolution
-- Data validation
+### MongoDB Atlas Integration
 
-## Demo System
+#### Environment Setup
 
-The Demo system remains separate from the main application:
-- Uses mock data
-- Provides example workflows
-- Shows feature capabilities
-- Supports testing
+1. **Root Directory (.env)**
+```env
+# .env
+NODE_ENV=development
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/tup?retryWrites=true&w=majority
+JWT_SECRET=your-secret-key
+```
 
-## Security Considerations
+2. **Frontend (.env.local)**
+```env
+# frontend/.env.local
+NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_APP_ENV=development
+```
 
-### Current Stage
-- Data stored locally
-- Basic input validation
-- No sensitive data stored
-- Simple authentication
+3. **Backend (.env.local)**
+```env
+# backend/.env.local
+PORT=5000
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/tup?retryWrites=true&w=majority
+JWT_SECRET=your-secret-key
+CORS_ORIGIN=http://localhost:3000
+```
 
-### Future Security
-- Server-side validation
-- Secure password storage
-- Token-based auth
-- API rate limiting
+#### MongoDB Setup Steps
 
-## Migration Path
+1. **Create Database Connection**
+```typescript
+// backend/src/config/database.ts
+import mongoose from 'mongoose';
 
-### To MongoDB
-1. Create schemas
-2. Add migration scripts
-3. Implement sync
-4. Add conflict resolution
+export async function connectDB() {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI as string);
+    console.log('MongoDB connected');
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    process.exit(1);
+  }
+}
+```
 
-### To Real Auth
-1. Add password hashing
-2. Implement JWT
-3. Add sessions
-4. Enable security features
+2. **User Schema**
+```typescript
+// backend/src/models/User.ts
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
-## Success Metrics
-- User data collected
-- Analytics working
-- Real usage patterns
-- Feature adoption
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  farm: String,
+  location: String,
+  role: { type: String, default: 'user' },
+  memberSince: { type: Date, default: Date.now },
+});
 
-## Next Steps
-1. Monitor user patterns
-2. Gather feedback
-3. Plan MongoDB migration
-4. Implement security features
+userSchema.pre('save', async function(next) {
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
+  next();
+});
+```
+
+3. **Authentication Controller**
+```typescript
+// backend/src/controllers/AuthController.ts
+import jwt from 'jsonwebtoken';
+import { User } from '../models/User';
+
+export class AuthController {
+  static async signup(req, res) {
+    try {
+      const user = new User(req.body);
+      await user.save();
+      
+      const token = jwt.sign(
+        { userId: user._id },
+        process.env.JWT_SECRET as string,
+        { expiresIn: '24h' }
+      );
+      
+      res.status(201).json({ user, token });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+  
+  static async signin(req, res) {
+    // ... signin logic
+  }
+}
+```
+
+### Authentication Flow
+
+#### Sign Up Process
+
+1. **Frontend Validation**
+```typescript
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  setErrors({});
+  
+  // Validate form
+  const newErrors: Record<string, string> = {};
+  if (!form.email) newErrors.email = 'Email is required';
+  if (!form.name) newErrors.name = 'Name is required';
+  if (!form.password) newErrors.password = 'Password is required';
+  else if (form.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+  
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors);
+    return;
+  }
+  
+  setIsLoading(true);
+  try {
+    const response = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form)
+    });
+    
+    if (!response.ok) throw new Error('Signup failed');
+    
+    const { user, token } = await response.json();
+    // Store token and user data
+    localStorage.setItem('token', token);
+    storage.setUser(user);
+    
+    router.push('/dashboard');
+  } catch (error) {
+    setErrors({ submit: error.message });
+  } finally {
+    setIsLoading(false);
+  }
+};
+```
+
+2. **Backend Processing**
+```typescript
+// backend/src/routes/auth.ts
+router.post('/signup', async (req, res) => {
+  try {
+    // Validate input
+    const { error } = validateSignup(req.body);
+    if (error) return res.status(400).json({ error: error.details[0].message });
+    
+    // Check if user exists
+    const existingUser = await User.findOne({ email: req.body.email });
+    if (existingUser) return res.status(400).json({ error: 'Email already registered' });
+    
+    // Create user
+    const user = new User(req.body);
+    await user.save();
+    
+    // Generate token
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+    
+    res.status(201).json({ user, token });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+```
+
+### Security Best Practices
+
+1. **Environment Variables**
+- Never commit .env files
+- Use different .env files for different environments
+- Rotate secrets regularly
+- Use strong JWT secrets
+
+2. **Password Security**
+- Hash passwords using bcrypt
+- Enforce minimum password strength
+- Implement password reset functionality
+- Store password reset tokens with expiration
+
+3. **API Security**
+- Implement rate limiting
+- Use CORS properly
+- Validate all inputs
+- Implement request timeouts
+
+4. **MongoDB Security**
+- Use connection string with credentials
+- Enable MongoDB Atlas security features
+- Regular backups
+- Network access restrictions
+
+### Migration Strategy
+
+1. **Local Storage to MongoDB**
+```typescript
+async function migrateData() {
+  // Get all local data
+  const localUser = storage.getUser();
+  const localAnimals = storage.getAnimals();
+  
+  // Create MongoDB user
+  const user = await User.create({
+    ...localUser,
+    password: await bcrypt.hash(localUser.password, 10)
+  });
+  
+  // Migrate related data
+  await Animal.insertMany(localAnimals.map(animal => ({
+    ...animal,
+    userId: user._id
+  })));
+  
+  // Clear local storage after successful migration
+  storage.clearAll();
+}
+```
+
+2. **Data Verification**
+```typescript
+async function verifyMigration(userId: string) {
+  const user = await User.findById(userId);
+  const animals = await Animal.find({ userId });
+  
+  // Verify data integrity
+  // Log any inconsistencies
+}
+```
+
+## Testing
+
+1. **Authentication Tests**
+```typescript
+describe('Auth Flow', () => {
+  it('should signup new user', async () => {
+    const response = await request(app)
+      .post('/api/auth/signup')
+      .send({
+        name: 'Test User',
+        email: 'test@example.com',
+        password: 'password123'
+      });
+    
+    expect(response.status).toBe(201);
+    expect(response.body).toHaveProperty('token');
+  });
+});
+```
+
+2. **Integration Tests**
+```typescript
+describe('Protected Routes', () => {
+  let token;
+  
+  beforeAll(async () => {
+    // Setup test user and get token
+  });
+  
+  it('should access protected route with valid token', async () => {
+    const response = await request(app)
+      .get('/api/protected')
+      .set('Authorization', `Bearer ${token}`);
+    
+    expect(response.status).toBe(200);
+  });
+});
+```
+
+## Monitoring
+
+1. **Error Tracking**
+- Implement error logging
+- Monitor failed authentication attempts
+- Track API response times
+- Monitor database performance
+
+2. **Usage Analytics**
+- Track user signups
+- Monitor active sessions
+- Analyze authentication patterns
+- Track feature usage
+
+## Maintenance
+
+1. **Regular Updates**
+- Update dependencies
+- Rotate secrets
+- Review security policies
+- Monitor for vulnerabilities
+
+2. **Backup Strategy**
+- Regular database backups
+- Automated backup testing
+- Disaster recovery plan
+- Data retention policy
