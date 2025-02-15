@@ -4,13 +4,47 @@ const STORAGE_KEYS = {
   ANIMALS: 'tup_animals',
   SHOWS: 'tup_shows',
   EVALUATIONS: 'tup_evaluations',
+  ANALYTICS: 'tup_analytics',
 } as const;
 
-// Type for stored data with version control
+// Public interfaces
 interface StoredData<T> {
   version: number;
   timestamp: number;
   data: T;
+}
+
+export interface Analytics {
+  signupDate: string;
+  lastActive: string;
+  actions: Array<{ type: string; timestamp: string; details?: any }>;
+  stats: {
+    totalAnimals: number;
+    upcomingShows: number;
+    completedEvaluations: number;
+    averageScores: any;
+    showParticipation: any;
+  };
+  version?: number;
+}
+
+export interface AnalyticsAction {
+  type: 'login' | 'logout' | 'signup' | 'evaluation' | 'show' | 'animal';
+  timestamp: string;
+  details?: {
+    [key: string]: any;
+  };
+}
+
+export interface StorageService {
+  getUser(): any;
+  setUser(user: any): void;
+  setAnimals(animals: any[]): void;
+  setShows(shows: any[]): void;
+  setEvaluations(evaluations: any[]): void;
+  getAnalytics(): Analytics;
+  updateAnalytics(data: Partial<Analytics>): void;
+  clearAll(): void;
 }
 
 class LocalStorageService {
@@ -176,35 +210,53 @@ class LocalStorageService {
     this.setEvaluations(filtered);
   }
 
-  // Analytics Methods
-  getAnalytics() {
+  // Analytics Methods - Combined functionality
+  public getAnalytics(): Analytics {
+    const stored = this.getItem<Analytics>(STORAGE_KEYS.ANALYTICS);
+    // Get current data
     const animals = this.getAnimals();
     const shows = this.getShows();
     const evaluations = this.getEvaluations();
 
-    return {
-      totalAnimals: animals.length,
-      upcomingShows: shows.filter(s => s.status === 'upcoming').length,
-      completedEvaluations: evaluations.length,
-      averageScores: this.calculateAverageScores(evaluations),
-      showParticipation: {
-        registered: shows.length,
-        upcoming: shows.filter(s => s.status === 'upcoming').length,
-        completed: shows.filter(s => s.status === 'completed').length,
+    // Create or update analytics
+    const currentStats = {
+      stats: {
+        totalAnimals: animals.length,
+        upcomingShows: shows.filter(s => s.status === 'upcoming').length,
+        completedEvaluations: evaluations.length,
+        averageScores: this.calculateAverageScores(evaluations),
+        showParticipation: {
+          registered: shows.length,
+          upcoming: shows.filter(s => s.status === 'upcoming').length,
+          completed: shows.filter(s => s.status === 'completed').length,
+        },
+        evaluationTrends: this.calculateEvaluationTrends(evaluations),
       },
-      evaluationTrends: this.calculateEvaluationTrends(evaluations),
+      lastActive: new Date().toISOString(),
     };
+
+    const analytics = stored?.data || {
+      signupDate: new Date().toISOString(),
+      lastActive: new Date().toISOString(),
+      actions: [],
+      stats: currentStats.stats,
+      version: 1
+    };
+
+    return analytics;
+  }
+
+  public updateAnalytics(data: Partial<Analytics>) {
+    const current = this.getAnalytics();
+    this.setItem(STORAGE_KEYS.ANALYTICS, {
+      ...current,
+      ...data,
+      lastActive: new Date().toISOString()
+    });
   }
 
   private calculateAverageScores(evaluations: any[]) {
-    if (evaluations.length === 0) {
-      return {
-        movement: 0,
-        conformation: 0,
-        muscleDevelopment: 0,
-        breedCharacteristics: 0,
-      };
-    }
+    if (evaluations.length === 0) return { movement: 0, conformation: 0, muscleDevelopment: 0, breedCharacteristics: 0 };
 
     const totals = evaluations.reduce((acc, evaluation) => ({
       movement: acc.movement + evaluation.scores.movement,
@@ -247,4 +299,4 @@ class LocalStorageService {
   }
 }
 
-export const storage = new LocalStorageService();
+export const storage: StorageService = new LocalStorageService();

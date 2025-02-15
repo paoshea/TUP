@@ -12,40 +12,71 @@ import Link from 'next/link';
 export default function SignUpClient() {
   const router = useRouter();
   const { signup } = useAuth();
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    farm: '',
+    location: '',
+    password: '',
+    confirmPassword: ''
+  });
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError('');
-    setIsLoading(true);
+    setErrors({});
 
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const confirmPassword = formData.get('confirmPassword') as string;
-    const name = formData.get('name') as string;
-    const farm = formData.get('farm') as string;
-    const location = formData.get('location') as string;
+    // Validate form
+    const newErrors: Record<string, string> = {};
+    if (!form.email) newErrors.email = 'Email is required';
+    if (!form.password) newErrors.password = 'Password is required';
+    if (form.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+    if (form.password !== form.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+    if (!form.firstName) newErrors.firstName = 'First name is required';
+    if (!form.lastName) newErrors.lastName = 'Last name is required';
+    // Farm and location are now optional
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       setIsLoading(false);
       return;
     }
-
+    
+    setIsLoading(true);
+    
     try {
       await signup({
-        name,
-        email,
-        farm,
-        location,
+        name: `${form.firstName} ${form.lastName}`,
+        email: form.email,
+        password: form.password,
+        farm: form.farm,
+        location: form.location,
       });
       router.push('/');
-    } catch (err) {
-      setError('Failed to create account');
+    } catch (err: any) {
+      setErrors({ submit: 'Failed to create account' });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.currentTarget;
+    setForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => {
+        const { [name]: _, ...rest } = prev;
+        return rest;
+      });
     }
   };
 
@@ -70,16 +101,40 @@ export default function SignUpClient() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
             <div>
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                name="name"
-                type="text"
-                autoComplete="name"
-                required
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
-                placeholder="John Smith"
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    name="firstName"
+                    type="text"
+                    autoComplete="given-name"
+                    required
+                    value={form.firstName}
+                    onChange={handleChange}
+                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+                    placeholder="John"
+                    aria-invalid={!!errors.firstName}
+                  />
+                  {errors.firstName && <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>}
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    name="lastName"
+                    type="text"
+                    autoComplete="family-name"
+                    required
+                    value={form.lastName}
+                    onChange={handleChange}
+                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+                    placeholder="Smith"
+                    aria-invalid={!!errors.lastName}
+                  />
+                  {errors.lastName && <p className="mt-1 text-sm text-red-500">{errors.lastName}</p>}
+                </div>
+              </div>
             </div>
 
             <div>
@@ -90,9 +145,13 @@ export default function SignUpClient() {
                 type="email"
                 autoComplete="email"
                 required
+                value={form.email}
+                onChange={handleChange}
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
                 placeholder="john@example.com"
+                aria-invalid={!!errors.email}
               />
+              {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
             </div>
 
             <div>
@@ -101,10 +160,13 @@ export default function SignUpClient() {
                 id="farm"
                 name="farm"
                 type="text"
-                required
+                value={form.farm}
+                onChange={handleChange}
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
                 placeholder="Highland Farm"
+                aria-invalid={!!errors.farm}
               />
+              {errors.farm && <p className="mt-1 text-sm text-red-500">{errors.farm}</p>}
             </div>
 
             <div>
@@ -113,10 +175,13 @@ export default function SignUpClient() {
                 id="location"
                 name="location"
                 type="text"
-                required
+                value={form.location}
+                onChange={handleChange}
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
                 placeholder="Scottish Borders"
+                aria-invalid={!!errors.location}
               />
+              {errors.location && <p className="mt-1 text-sm text-red-500">{errors.location}</p>}
             </div>
 
             <div>
@@ -127,10 +192,14 @@ export default function SignUpClient() {
                 type="password"
                 autoComplete="new-password"
                 required
+                value={form.password}
+                onChange={handleChange}
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
                 placeholder="••••••••"
                 minLength={8}
+                aria-invalid={!!errors.password}
               />
+              {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
             </div>
 
             <div>
@@ -141,15 +210,19 @@ export default function SignUpClient() {
                 type="password"
                 autoComplete="new-password"
                 required
+                value={form.confirmPassword}
+                onChange={handleChange}
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
                 placeholder="••••••••"
                 minLength={8}
+                aria-invalid={!!errors.confirmPassword}
               />
+              {errors.confirmPassword && <p className="mt-1 text-sm text-red-500">{errors.confirmPassword}</p>}
             </div>
           </div>
 
-          {error && (
-            <div className="text-red-500 text-sm text-center">{error}</div>
+          {errors.submit && (
+            <div className="text-red-500 text-sm text-center">{errors.submit}</div>
           )}
 
           <div>

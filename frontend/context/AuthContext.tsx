@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { storage } from '@/services/storage';
+import type { AnalyticsAction } from '@/services/storage';
 
 interface User {
   id: string;
@@ -13,12 +14,16 @@ interface User {
   memberSince: string;
 }
 
+interface SignupData extends Omit<User, 'id' | 'role' | 'memberSince'> {
+  password: string;
+}
+
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (userData: Omit<User, 'id' | 'role' | 'memberSince'>) => Promise<void>;
+  signup: (userData: SignupData) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -40,10 +45,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, _password: string) => {
     try {
       setIsLoading(true);
-      // Find user by email
       const storedUser = storage.getUser();
       
       if (storedUser?.email === email) {
+        storage.updateAnalytics({
+          actions: [{
+            type: 'login',
+            timestamp: new Date().toISOString(),
+          } as AnalyticsAction]
+        });
         // Any password works at this stage
         setUser(storedUser);
       } else {
@@ -57,10 +67,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signup = async (userData: Omit<User, 'id' | 'role' | 'memberSince'>) => {
+  const signup = async ({ password, ...userData }: SignupData) => {
     try {
       setIsLoading(true);
-      
+
+      // Initialize empty collections
+      storage.setAnimals([]);
+      storage.setShows([]);
+      storage.setEvaluations([]);
+
+      // Initialize analytics
+      storage.updateAnalytics({
+        signupDate: new Date().toISOString(),
+        actions: [{
+          type: 'signup',
+          timestamp: new Date().toISOString(),
+          details: { email: userData.email }
+        } as AnalyticsAction]
+      });
+
       // Create new user
       const newUser: User = {
         id: `user-${Date.now()}`,
@@ -69,7 +94,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...userData,
       };
 
-      // Store user data
       storage.setUser(newUser);
       setUser(newUser);
     } catch (error) {
@@ -83,6 +107,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       setIsLoading(true);
+      
+      // Track logout in analytics before clearing data
+      storage.updateAnalytics({
+        actions: [{
+          type: 'logout',
+          timestamp: new Date().toISOString()
+        } as AnalyticsAction]
+      });
+
       storage.clearAll(); // Clear all stored data
       setUser(null);
     } catch (error) {

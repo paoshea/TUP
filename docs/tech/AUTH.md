@@ -28,10 +28,10 @@ The current authentication system uses local storage to maintain user data and s
 
 #### Sign Up
 1. User enters:
-   - Name (required)
+   - Name (required) - [change to First name, Last name]
    - Email (required)
-   - Farm name (required)
-   - Location (required)
+   - Farm name (required) - [change to optional]
+   - Location (required)  - [change to optional]
    - Password (any value accepted)
 2. System:
    - Validates required fields

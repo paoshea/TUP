@@ -17,16 +17,17 @@ interface Message {
 interface WizardPhilProps {
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  initialMessage?: string;
 }
 
-export function WizardPhil({ isOpen = false, onOpenChange }: WizardPhilProps): React.ReactElement {
+export function WizardPhil({ isOpen = false, onOpenChange, initialMessage }: WizardPhilProps): JSX.Element {
   logger.log('[WizardPhil] Component rendering with isOpen:', isOpen);
 
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       type: 'assistant',
-      content: "Hi! I'm WizardPhil, your AI-powered livestock show assistant. I can help with performance analysis, breed standards, and show preparation.",
+      content: initialMessage || "Hi! I'm WizardPhil, your AI-powered livestock show assistant. I can help with performance analysis, breed standards, and show preparation.",
       timestamp: new Date(),
     },
   ]);
