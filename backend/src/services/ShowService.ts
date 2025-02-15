@@ -9,6 +9,7 @@ import {
   ProfilePublic,
   formatProfilePublic
 } from '../types/prisma';
+import { CreateShowEntryInput } from '../types/show';
 
 interface ShowResult {
   placement: number;
@@ -35,11 +36,11 @@ export class ShowService extends PrismaService {
     organizerId: string
   ) {
     try {
-      const result = await this.$transaction(async (tx) => {
-        const show = await tx.show.create({
+      const result = await this.$transaction(async (prisma) => {
+        const show = await prisma.show.create({
           data: {
             ...data,
-            categories: JSON.stringify(data.categories),
+            categories: data.categories as unknown as Prisma.InputJsonValue,
             organizer: {
               connect: { id: organizerId }
             },
@@ -49,11 +50,15 @@ export class ShowService extends PrismaService {
           }
         });
 
-        return {
+        const parsedShow = {
           ...show,
-          categories: JSON.parse(show.categories as string) as ShowCategory[],
+          categories: typeof show.categories === 'string' 
+            ? JSON.parse(show.categories) 
+            : show.categories as unknown as ShowCategory[],
           organizer: formatProfilePublic(show.organizer)
         };
+
+        return parsedShow;
       });
 
       return result;
@@ -74,9 +79,11 @@ export class ShowService extends PrismaService {
         }
       });
 
-      return shows.map(show => ({
+      return shows.map((show) => ({
         ...show,
-        categories: JSON.parse(show.categories as string) as ShowCategory[],
+        categories: typeof show.categories === 'string'
+          ? JSON.parse(show.categories)
+          : show.categories as unknown as ShowCategory[],
         organizer: formatProfilePublic(show.organizer)
       }));
     } catch (error) {
@@ -103,9 +110,11 @@ export class ShowService extends PrismaService {
         }
       });
 
-      return shows.map(show => ({
+      return shows.map((show) => ({
         ...show,
-        categories: JSON.parse(show.categories as string) as ShowCategory[],
+        categories: typeof show.categories === 'string'
+          ? JSON.parse(show.categories)
+          : show.categories as unknown as ShowCategory[],
         organizer: formatProfilePublic(show.organizer)
       }));
     } catch (error) {
@@ -140,7 +149,9 @@ export class ShowService extends PrismaService {
 
       return {
         ...show,
-        categories: JSON.parse(show.categories as string) as ShowCategory[],
+        categories: typeof show.categories === 'string'
+          ? JSON.parse(show.categories)
+          : show.categories as unknown as ShowCategory[],
         organizer: formatProfilePublic(show.organizer)
       };
     } catch (error) {
@@ -161,8 +172,12 @@ export class ShowService extends PrismaService {
 
     try {
       const updateData: Prisma.ShowUpdateInput = {
-        ...data,
-        categories: data.categories ? JSON.stringify(data.categories) : undefined
+        name: data.name,
+        date: data.date,
+        location: data.location,
+        categories: data.categories 
+          ? (data.categories as unknown as Prisma.InputJsonValue)
+          : undefined
       };
 
       const result = await this.show.update({
@@ -175,7 +190,9 @@ export class ShowService extends PrismaService {
 
       return {
         ...result,
-        categories: JSON.parse(result.categories as string) as ShowCategory[],
+        categories: typeof result.categories === 'string'
+          ? JSON.parse(result.categories)
+          : result.categories as unknown as ShowCategory[],
         organizer: formatProfilePublic(result.organizer)
       };
     } catch (error) {
@@ -207,7 +224,21 @@ export class ShowService extends PrismaService {
    */
   async getShowStats(showId: string): Promise<ShowStats> {
     try {
-      const show = await this.$queryRaw<any>`
+      type RawShowData = {
+        categories: string;
+        entries: Array<{
+          id: string;
+          entryNumber: number;
+          category: string;
+          animal: {
+            id: string;
+            name: string;
+          };
+          results: ShowResult[];
+        }>;
+      };
+
+      const show = await this.$queryRaw<RawShowData[]>`
         SELECT 
           s.categories,
           json_agg(
@@ -241,7 +272,9 @@ export class ShowService extends PrismaService {
       }
 
       const showData = show[0];
-      const categories = JSON.parse(showData.categories) as ShowCategory[];
+      const categories = typeof showData.categories === 'string'
+        ? JSON.parse(showData.categories)
+        : showData.categories as unknown as ShowCategory[];
       const entries = showData.entries || [];
 
       const stats: ShowStats = {
@@ -257,7 +290,7 @@ export class ShowService extends PrismaService {
       });
 
       // Calculate results by category
-      categories.forEach(category => {
+      categories.forEach((category: ShowCategory) => {
         const categoryEntries = entries.filter((e: ShowEntry) => e.category === category.name);
 
         const topPlacements = categoryEntries
@@ -265,10 +298,10 @@ export class ShowService extends PrismaService {
             entry,
             result: entry.results[0] // Assuming one result per entry
           }))
-          .filter(({ result }: { result: ShowResult | undefined }) => result?.placement != null && result?.points != null)
-          .sort((a: { result: ShowResult }, b: { result: ShowResult }) => a.result.placement - b.result.placement)
+          .filter(({ result }) => result?.placement != null && result?.points != null)
+          .sort((a, b) => a.result.placement - b.result.placement)
           .slice(0, 3)
-          .map(({ entry, result }: { entry: ShowEntry; result: ShowResult }) => ({
+          .map(({ entry, result }) => ({
             entry_number: entry.entryNumber,
             animal_name: entry.animal.name,
             placement: result.placement,
@@ -300,8 +333,7 @@ export class ShowService extends PrismaService {
         }
       });
 
-      return entries.map(entry => {
-        return {
+      return entries.map((entry) => ({
         id: entry.id,
         entryNumber: entry.entryNumber,
         category: entry.category,
@@ -310,7 +342,75 @@ export class ShowService extends PrismaService {
           name: entry.animal.name
         },
         results: []
-      }});
+      }));
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  /**
+   * Create a show entry
+   */
+  async createShowEntry(
+    showId: string,
+    data: CreateShowEntryInput,
+    userId: string
+  ): Promise<ShowEntry> {
+    try {
+      // Verify show exists
+      const show = await this.show.findUnique({
+        where: { id: showId }
+      });
+
+      if (!show) {
+        throw new ApiError(404, 'SHOW_NOT_FOUND', 'Show not found');
+      }
+
+      // Get the next entry number for this show
+      const lastEntry = await this.showEntry.findFirst({
+        where: { showId },
+        orderBy: { entryNumber: 'desc' }
+      });
+
+      const entryNumber = (lastEntry?.entryNumber ?? 0) + 1;
+
+      const entry = await this.showEntry.create({
+        data: {
+          entryNumber,
+          category: data.category,
+          show: { connect: { id: showId } },
+          animal: { connect: { id: data.animalId } },
+          owner: { connect: { id: userId } }
+        },
+        include: {
+          animal: true,
+          showResults: true
+        }
+      });
+
+      return {
+        id: entry.id,
+        entryNumber: entry.entryNumber,
+        category: entry.category,
+        animal: {
+          id: entry.animal.id,
+          name: entry.animal.name
+        },
+        results: entry.showResults
+      };
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  /**
+   * Record a show result
+   */
+  async recordShowResult(entryId: string, placement: number, points: number, notes?: string) {
+    try {
+      return await this.showResult.create({
+        data: { showEntryId: entryId, placement, points, notes }
+      });
     } catch (error) {
       this.handleError(error);
     }

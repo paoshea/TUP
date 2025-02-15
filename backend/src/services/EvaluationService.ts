@@ -9,28 +9,30 @@ import {
   EvaluationMetadata,
   EVALUATION_CRITERIA,
   evaluationInclude,
-  serializeJson,
-  serializeNullableJson,
-  parseJson,
   isEvaluationScores,
   isEvaluationMetadata,
-  DbCreateInput,
-  DbUpdateInput
+  RawEvaluation
 } from '../types/evaluation';
 
 export class EvaluationService extends PrismaService {
   /**
    * Transform raw evaluation data to typed evaluation
    */
-  private transformEvaluation(evaluation: Prisma.EvaluationGetPayload<{
-    include: typeof evaluationInclude;
-  }>): EvaluationWithRelations {
-    const scores = parseJson<EvaluationScores>(evaluation.scores);
+  private transformEvaluation(evaluation: RawEvaluation): EvaluationWithRelations {
+    const scores = typeof evaluation.scores === 'string' 
+      ? JSON.parse(evaluation.scores)
+      : evaluation.scores;
+
     if (!scores || !isEvaluationScores(scores)) {
       throw new ApiError(500, 'INVALID_DATA', 'Invalid evaluation scores format');
     }
 
-    const metadata = parseJson<EvaluationMetadata>(evaluation.metadata);
+    const metadata = evaluation.metadata 
+      ? (typeof evaluation.metadata === 'string' 
+        ? JSON.parse(evaluation.metadata)
+        : evaluation.metadata)
+      : undefined;
+
     if (metadata && !isEvaluationMetadata(metadata)) {
       throw new ApiError(500, 'INVALID_DATA', 'Invalid evaluation metadata format');
     }
@@ -53,10 +55,10 @@ export class EvaluationService extends PrismaService {
       // Validate scores
       this.validateScores(data.scores);
 
-      const createData: DbCreateInput = {
-        scores: serializeJson(data.scores),
+      const createData: Prisma.EvaluationCreateInput = {
+        scores: data.scores as Prisma.InputJsonValue,
         notes: data.notes ?? null,
-        metadata: serializeNullableJson(data.metadata),
+        metadata: data.metadata as Prisma.InputJsonValue ?? null,
         animal: {
           connect: { id: data.animalId }
         },
@@ -116,7 +118,7 @@ export class EvaluationService extends PrismaService {
         orderBy: { createdAt: 'desc' }
       });
 
-      return evaluations.map(evaluation => this.transformEvaluation(evaluation));
+      return evaluations.map((evaluation: RawEvaluation) => this.transformEvaluation(evaluation));
     } catch (error) {
       this.handleError(error);
     }
@@ -133,7 +135,7 @@ export class EvaluationService extends PrismaService {
         orderBy: { createdAt: 'desc' }
       });
 
-      return evaluations.map(evaluation => this.transformEvaluation(evaluation));
+      return evaluations.map((evaluation: RawEvaluation) => this.transformEvaluation(evaluation));
     } catch (error) {
       this.handleError(error);
     }
@@ -156,10 +158,10 @@ export class EvaluationService extends PrismaService {
         this.validateScores(data.scores);
       }
 
-      const updateData: DbUpdateInput = {
-        scores: data.scores ? serializeJson(data.scores) : undefined,
+      const updateData: Prisma.EvaluationUpdateInput = {
+        scores: data.scores as Prisma.InputJsonValue ?? undefined,
         notes: data.notes,
-        metadata: data.metadata !== undefined ? serializeNullableJson(data.metadata) : undefined
+        metadata: data.metadata as Prisma.InputJsonValue ?? undefined
       };
 
       const result = await this.evaluation.update({
@@ -210,16 +212,17 @@ export class EvaluationService extends PrismaService {
         };
       }
 
-      const scores = evaluations.map(e => parseJson<EvaluationScores>(e.scores))
+      const scores = evaluations
+        .map(e => typeof e.scores === 'string' ? JSON.parse(e.scores) : e.scores)
         .filter((s): s is EvaluationScores => s !== undefined && isEvaluationScores(s));
 
       const totalEvaluations = scores.length;
 
-      const averageScores = Object.keys(EVALUATION_CRITERIA).reduce((acc, category) => {
-        const total = scores.reduce((sum, score) => sum + score[category], 0);
+      const averageScores = Object.keys(EVALUATION_CRITERIA).reduce<Partial<EvaluationScores>>((acc, category) => {
+        const total = scores.reduce((sum: number, score: EvaluationScores) => sum + score[category], 0);
         acc[category] = Math.round((total / totalEvaluations) * 10) / 10;
         return acc;
-      }, {} as Partial<EvaluationScores>);
+      }, {});
 
       return {
         totalEvaluations,

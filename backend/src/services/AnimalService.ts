@@ -20,6 +20,18 @@ export interface AnimalStats {
   byRegion: Record<string, number>;
 }
 
+type AnimalStatsAccumulator = {
+  byBreed: Record<string, number>;
+  byCategory: Record<string, number>;
+  byRegion: Record<string, number>;
+};
+
+type AnimalStatsData = {
+  breed: string;
+  category: string;
+  region: string;
+};
+
 export class AnimalService extends PrismaService {
   /**
    * Create a new animal
@@ -164,7 +176,7 @@ export class AnimalService extends PrismaService {
         }
       });
 
-      const stats = animals.reduce((acc, animal) => {
+      const stats = animals.reduce<AnimalStatsAccumulator>((acc: AnimalStatsAccumulator, animal: AnimalStatsData) => {
         // Count by breed
         acc.byBreed[animal.breed] = (acc.byBreed[animal.breed] || 0) + 1;
 
@@ -176,9 +188,9 @@ export class AnimalService extends PrismaService {
 
         return acc;
       }, {
-        byBreed: {} as Record<string, number>,
-        byCategory: {} as Record<string, number>,
-        byRegion: {} as Record<string, number>
+        byBreed: {},
+        byCategory: {},
+        byRegion: {}
       });
 
       return stats;

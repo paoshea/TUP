@@ -1,124 +1,148 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.animalService = exports.AnimalService = void 0;
-const mongoose_1 = require("mongoose");
-const models_1 = require("../models");
-const BaseService_1 = require("./BaseService");
+const PrismaService_1 = require("./PrismaService");
 const apiResponse_1 = require("../utils/apiResponse");
-class AnimalService extends BaseService_1.BaseService {
-    constructor() {
-        super(models_1.Animal);
-    }
+class AnimalService extends PrismaService_1.PrismaService {
     /**
      * Create a new animal
      */
-    async createAnimal(data, userId) {
-        const animal = await this.create({
-            ...data,
-            owner: new mongoose_1.Types.ObjectId(userId),
-        });
-        return animal;
+    async createAnimal(data, ownerId) {
+        try {
+            return await this.animal.create({
+                data: {
+                    ...data,
+                    scores: data.scores ? JSON.stringify(data.scores) : '{}',
+                    images: data.images || [],
+                    owner: {
+                        connect: { id: ownerId }
+                    }
+                }
+            });
+        }
+        catch (error) {
+            this.handleError(error);
+        }
     }
     /**
-     * Get animals owned by a user
+     * Get all animals for a user
      */
-    async getUserAnimals(userId, query = {}) {
-        return this.find({
-            owner: new mongoose_1.Types.ObjectId(userId),
-            ...query,
-        });
+    async getUserAnimals(ownerId) {
+        try {
+            return await this.animal.findMany({
+                where: { ownerId },
+                orderBy: { createdAt: 'desc' }
+            });
+        }
+        catch (error) {
+            this.handleError(error);
+        }
     }
     /**
-     * Get an animal by ID and verify ownership
+     * Get an animal by ID and verify access
      */
-    async getAnimalById(animalId, userId) {
-        const animal = await this.findById(animalId);
-        if (!animal) {
-            throw new apiResponse_1.ApiError(404, 'ANIMAL_NOT_FOUND', 'Animal not found');
+    async getAnimalById(animalId, userId, isAdmin = false) {
+        try {
+            const animal = await this.animal.findUnique({
+                where: { id: animalId }
+            });
+            if (!animal) {
+                throw new apiResponse_1.ApiError(404, 'ANIMAL_NOT_FOUND', 'Animal not found');
+            }
+            // Check access - allow if user is admin or owner
+            if (!isAdmin && animal.ownerId !== userId) {
+                throw new apiResponse_1.ApiError(403, 'FORBIDDEN', 'You do not have access to this animal');
+            }
+            return animal;
         }
-        if (animal.owner.toString() !== userId) {
-            throw new apiResponse_1.ApiError(403, 'FORBIDDEN', 'You do not have access to this animal');
+        catch (error) {
+            this.handleError(error);
         }
-        return animal;
     }
     /**
      * Update an animal
      */
-    async updateAnimal(animalId, userId, data) {
-        const animal = await this.getAnimalById(animalId, userId);
-        // Remove owner from update data for security
-        const { owner, ...updateData } = data;
-        const updatedAnimal = await this.update(animalId, updateData);
-        if (!updatedAnimal) {
-            throw new apiResponse_1.ApiError(404, 'ANIMAL_NOT_FOUND', 'Animal not found');
+    async updateAnimal(animalId, userId, data, isAdmin = false) {
+        try {
+            // Verify animal exists and user has access
+            await this.getAnimalById(animalId, userId, isAdmin);
+            return await this.animal.update({
+                where: { id: animalId },
+                data: {
+                    ...data,
+                    scores: data.scores ? JSON.stringify(data.scores) : undefined
+                }
+            });
         }
-        return updatedAnimal;
+        catch (error) {
+            this.handleError(error);
+        }
     }
     /**
      * Delete an animal
      */
-    async deleteAnimal(animalId, userId) {
-        const animal = await this.getAnimalById(animalId, userId);
-        const deletedAnimal = await this.delete(animalId);
-        if (!deletedAnimal) {
-            throw new apiResponse_1.ApiError(404, 'ANIMAL_NOT_FOUND', 'Animal not found');
+    async deleteAnimal(animalId, userId, isAdmin = false) {
+        try {
+            // Verify animal exists and user has access
+            await this.getAnimalById(animalId, userId, isAdmin);
+            await this.animal.delete({
+                where: { id: animalId }
+            });
+        }
+        catch (error) {
+            this.handleError(error);
         }
     }
     /**
      * Search animals by criteria
      */
     async searchAnimals(criteria) {
-        const query = {};
-        if (criteria.breed) {
-            query.breed = criteria.breed;
+        try {
+            return await this.animal.findMany({
+                where: {
+                    AND: [
+                        criteria.breed ? { breed: criteria.breed } : {},
+                        criteria.category ? { category: criteria.category } : {},
+                        criteria.region ? { region: criteria.region } : {}
+                    ]
+                }
+            });
         }
-        if (criteria.category) {
-            query.category = criteria.category;
+        catch (error) {
+            this.handleError(error);
         }
-        if (criteria.region) {
-            query.region = criteria.region;
-        }
-        if (criteria.owner) {
-            query.owner = new mongoose_1.Types.ObjectId(criteria.owner);
-        }
-        if (criteria.minScore || criteria.maxScore) {
-            query['scores.average'] = {};
-            if (criteria.minScore) {
-                query['scores.average'].$gte = criteria.minScore;
-            }
-            if (criteria.maxScore) {
-                query['scores.average'].$lte = criteria.maxScore;
-            }
-        }
-        return this.find(query);
     }
     /**
      * Get animal statistics
      */
     async getAnimalStats(userId) {
-        const animals = await this.getUserAnimals(userId);
-        const stats = {
-            total: animals.length,
-            byBreed: {},
-            byCategory: {},
-            averageScore: 0,
-        };
-        let totalScore = 0;
-        let scoreCount = 0;
-        animals.forEach(animal => {
-            // Count by breed
-            stats.byBreed[animal.breed] = (stats.byBreed[animal.breed] || 0) + 1;
-            // Count by category
-            stats.byCategory[animal.category] = (stats.byCategory[animal.category] || 0) + 1;
-            // Calculate average score
-            const scores = Object.values(animal.scores);
-            if (scores.length > 0) {
-                totalScore += scores.reduce((a, b) => a + b, 0) / scores.length;
-                scoreCount++;
-            }
-        });
-        stats.averageScore = scoreCount > 0 ? totalScore / scoreCount : 0;
-        return stats;
+        try {
+            const animals = await this.animal.findMany({
+                where: { ownerId: userId },
+                select: {
+                    breed: true,
+                    category: true,
+                    region: true
+                }
+            });
+            const stats = animals.reduce((acc, animal) => {
+                // Count by breed
+                acc.byBreed[animal.breed] = (acc.byBreed[animal.breed] || 0) + 1;
+                // Count by category
+                acc.byCategory[animal.category] = (acc.byCategory[animal.category] || 0) + 1;
+                // Count by region
+                acc.byRegion[animal.region] = (acc.byRegion[animal.region] || 0) + 1;
+                return acc;
+            }, {
+                byBreed: {},
+                byCategory: {},
+                byRegion: {}
+            });
+            return stats;
+        }
+        catch (error) {
+            this.handleError(error);
+        }
     }
 }
 exports.AnimalService = AnimalService;

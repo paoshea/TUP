@@ -1,4 +1,10 @@
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+
+type PrismaEvaluation = Prisma.EvaluationGetPayload<{
+  include: { animal: true; evaluator: true }
+}>;
+type PrismaAnimal = Prisma.AnimalGetPayload<{}>;
+type PrismaProfile = Prisma.ProfileGetPayload<{}>;
 
 export interface EvaluationScores {
   [key: string]: number;
@@ -39,9 +45,7 @@ export const evaluationInclude = {
 } as const;
 
 // Raw database types
-export type RawEvaluation = Prisma.EvaluationGetPayload<{
-  include: typeof evaluationInclude;
-}>;
+export type RawEvaluation = PrismaEvaluation;
 
 // Type for evaluation with parsed JSON fields
 export type EvaluationWithRelations = Omit<RawEvaluation, 'scores' | 'metadata'> & {
@@ -51,42 +55,42 @@ export type EvaluationWithRelations = Omit<RawEvaluation, 'scores' | 'metadata'>
 
 // Database input types
 export type DbCreateInput = {
-  scores: Prisma.InputJsonValue;
+  scores: Record<string, unknown>;
   notes?: string | null;
-  metadata?: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue;
+  metadata?: Record<string, unknown> | null;
   animal: { connect: { id: string } };
   evaluator: { connect: { id: string } };
 };
 
 export type DbUpdateInput = {
-  scores?: Prisma.InputJsonValue;
+  scores?: Record<string, unknown>;
   notes?: string | null;
-  metadata?: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue;
+  metadata?: Record<string, unknown> | null;
 };
 
 // JSON helpers
-export const serializeJson = <T>(data: T | null | undefined): Prisma.InputJsonValue => {
+export const serializeJson = <T>(data: T | null | undefined): Record<string, unknown> => {
   if (data === null || data === undefined) {
-    return {} as Prisma.InputJsonValue;
+    return {};
   }
-  return JSON.stringify(data) as Prisma.InputJsonValue;
+  return JSON.parse(JSON.stringify(data));
 };
 
 export const serializeNullableJson = <T>(
   data: T | null | undefined
-): Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue => {
+): Record<string, unknown> | null => {
   if (data === null || data === undefined) {
-    return Prisma.JsonNull;
+    return null;
   }
-  return JSON.stringify(data) as Prisma.InputJsonValue;
+  return JSON.parse(JSON.stringify(data));
 };
 
-export const parseJson = <T>(data: Prisma.JsonValue | null): T | undefined => {
-  if (data === null || data === undefined || data === '') {
+export const parseJson = <T>(data: Record<string, unknown> | null): T | undefined => {
+  if (data === null || data === undefined || Object.keys(data).length === 0) {
     return undefined;
   }
   try {
-    return JSON.parse(typeof data === 'string' ? data : JSON.stringify(data)) as T;
+    return data as unknown as T;
   } catch {
     return undefined;
   }

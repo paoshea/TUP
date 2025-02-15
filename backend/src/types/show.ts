@@ -1,7 +1,7 @@
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { ProfilePublic } from './prisma';
 
-// Make ShowCategory compatible with Prisma.JsonValue
+// Make ShowCategory compatible with Record<string, unknown>
 export type ShowCategory = {
   [key: string]: string | string[];
 } & {
@@ -25,16 +25,27 @@ export interface ShowEntry {
   results: ShowResult[];
 }
 
-// Raw database types
+// Prisma include types
+export const showIncludes = {
+  organizer: true
+} as const;
+
+export const showEntryIncludes = {
+  animal: true,
+  showResults: true
+} as const;
+
+// Type utilities
+export type ShowInclude = typeof showIncludes;
+export type ShowEntryInclude = typeof showEntryIncludes;
+
+// Raw database types with includes
 export type RawShow = Prisma.ShowGetPayload<{
-  include: { organizer: true };
+  include: ShowInclude;
 }>;
 
 export type RawShowEntry = Prisma.ShowEntryGetPayload<{
-  include: {
-    animal: true;
-    showResults: true;
-  };
+  include: ShowEntryInclude;
 }>;
 
 // Extended types with parsed JSON
@@ -87,32 +98,18 @@ export type ShowQueryResult = {
   }>;
 };
 
-// Prisma include types
-export const showIncludes = {
-  organizer: true
-} as const;
-
-export const showEntryIncludes = {
-  animal: true,
-  showResults: true
-} as const;
-
-// Type utilities
-export type ShowInclude = typeof showIncludes;
-export type ShowEntryInclude = typeof showEntryIncludes;
-
 // JSON helpers
-export const serializeCategories = (categories: ShowCategory[]): Prisma.InputJsonValue => {
-  // Convert to plain objects that satisfy Prisma.JsonValue
+export const serializeCategories = (categories: ShowCategory[]): Record<string, unknown> => {
+  // Convert to plain objects
   const jsonCategories = categories.map(({ name, classes, ...rest }) => ({
     name,
     classes,
     ...rest
   }));
-  return JSON.stringify(jsonCategories);
+  return JSON.parse(JSON.stringify(jsonCategories));
 };
 
-export const parseCategories = (categoriesJson: string | Prisma.JsonValue): ShowCategory[] => {
+export const parseCategories = (categoriesJson: string | Record<string, unknown>): ShowCategory[] => {
   const parsed = typeof categoriesJson === 'string' 
     ? JSON.parse(categoriesJson) 
     : JSON.parse(JSON.stringify(categoriesJson));

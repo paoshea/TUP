@@ -33,46 +33,58 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.showController = exports.evaluationController = exports.authController = exports.animalController = void 0;
+exports.controllers = exports.notificationController = exports.showController = exports.evaluationController = exports.authController = exports.animalController = void 0;
 const animal = __importStar(require("./AnimalController"));
 const auth = __importStar(require("./AuthController"));
 const evaluation = __importStar(require("./EvaluationController"));
 const show = __importStar(require("./ShowController"));
-exports.animalController = {
+const notification = __importStar(require("./NotificationController"));
+// Individual controller exports for routes
+exports.animalController = animal;
+exports.authController = auth;
+exports.evaluationController = evaluation;
+exports.showController = show;
+exports.notificationController = notification;
+// Combined controllers object for convenience
+exports.controllers = {
+    // Animal endpoints
     createAnimal: animal.createAnimal,
-    getAnimals: animal.getAnimals,
     getAnimal: animal.getAnimal,
     updateAnimal: animal.updateAnimal,
     deleteAnimal: animal.deleteAnimal,
+    getAnimals: animal.getAnimals,
     searchAnimals: animal.searchAnimals,
-    getAnimalStats: animal.getAnimalStats
-};
-exports.authController = {
+    getStats: animal.getStats,
+    // Auth endpoints
     signUp: auth.signUp,
     signIn: auth.signIn,
     verifyToken: auth.verifyToken,
     changePassword: auth.changePassword,
     requestPasswordReset: auth.requestPasswordReset,
-    resetPassword: auth.resetPassword
-};
-exports.evaluationController = {
+    resetPassword: auth.resetPassword,
+    // Evaluation endpoints
     createEvaluation: evaluation.createEvaluation,
-    getAnimalEvaluations: evaluation.getAnimalEvaluations,
-    getEvaluatorEvaluations: evaluation.getEvaluatorEvaluations,
     getEvaluation: evaluation.getEvaluation,
     updateEvaluation: evaluation.updateEvaluation,
     deleteEvaluation: evaluation.deleteEvaluation,
-    getEvaluationStats: evaluation.getEvaluationStats
-};
-exports.showController = {
+    getAnimalEvaluations: evaluation.getAnimalEvaluations,
+    getEvaluatorEvaluations: evaluation.getEvaluatorEvaluations,
+    getEvaluationStats: evaluation.getEvaluationStats,
+    // Show endpoints
     createShow: show.createShow,
-    getOrganizedShows: show.getOrganizedShows,
-    getUpcomingShows: show.getUpcomingShows,
     getShow: show.getShow,
     updateShow: show.updateShow,
     deleteShow: show.deleteShow,
+    getOrganizedShows: show.getOrganizedShows,
+    getUpcomingShows: show.getUpcomingShows,
     createShowEntry: show.createShowEntry,
     getShowEntries: show.getShowEntries,
     recordShowResult: show.recordShowResult,
-    getShowStats: show.getShowStats
+    getShowStats: show.getShowStats,
+    // Notification endpoints
+    getUserNotifications: notification.getUserNotifications,
+    markNotificationAsRead: notification.markNotificationAsRead,
+    processPendingNotifications: notification.processPendingNotifications,
+    cleanupNotifications: notification.cleanupNotifications,
+    registerPushToken: notification.registerPushToken
 };

@@ -45,13 +45,16 @@ exports.deleteShow = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
 exports.createShowEntry = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const userId = req.user.id;
     const { showId } = req.params;
-    const { animalId, category } = req.body;
-    const entry = await services_1.showService.createEntry(showId, animalId, userId, category);
+    const entryData = {
+        animalId: req.body.animalId,
+        category: req.body.category
+    };
+    const entry = await services_1.showService.createShowEntry(showId, entryData, userId);
     res.status(201).json({ success: true, data: entry });
 });
 exports.getShowEntries = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const { showId } = req.params;
-    const entries = await services_1.showService.getShowEntries(showId);
+    const entries = await services_1.showService.getEntries(showId);
     res.json({ success: true, data: entries });
 });
 exports.recordShowResult = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
@@ -62,7 +65,7 @@ exports.recordShowResult = (0, asyncHandler_1.asyncHandler)(async (req, res) => 
     if (((_a = req.user) === null || _a === void 0 ? void 0 : _a.role) !== 'admin') {
         throw new apiResponse_1.ApiError(403, 'FORBIDDEN', 'Only administrators can record show results');
     }
-    const result = await services_1.showService.recordResult(entryId, placement, points, notes);
+    const result = await services_1.showService.recordShowResult(entryId, placement, points, notes);
     res.status(201).json({ success: true, data: result });
 });
 exports.getShowStats = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
