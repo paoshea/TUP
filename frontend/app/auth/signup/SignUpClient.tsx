@@ -13,8 +13,7 @@ export default function SignUpClient() {
   const router = useRouter();
   const { signup } = useAuth();
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
     farm: '',
     location: '',
@@ -27,17 +26,17 @@ export default function SignUpClient() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrors({});
+    setIsLoading(true);
 
     // Validate form
     const newErrors: Record<string, string> = {};
     if (!form.email) newErrors.email = 'Email is required';
+    if (!form.name) newErrors.name = 'Name is required';
     if (!form.password) newErrors.password = 'Password is required';
-    if (form.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-    if (form.password !== form.confirmPassword) {
+    if (!form.confirmPassword) newErrors.confirmPassword = 'Please confirm your password';
+    else if (form.password !== form.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
-    if (!form.firstName) newErrors.firstName = 'First name is required';
-    if (!form.lastName) newErrors.lastName = 'Last name is required';
     // Farm and location are now optional
 
     if (Object.keys(newErrors).length > 0) {
@@ -46,11 +45,9 @@ export default function SignUpClient() {
       return;
     }
     
-    setIsLoading(true);
-    
     try {
       await signup({
-        name: `${form.firstName} ${form.lastName}`,
+        name: form.name,
         email: form.email,
         password: form.password,
         farm: form.farm,
@@ -58,7 +55,12 @@ export default function SignUpClient() {
       });
       router.push('/');
     } catch (err: any) {
-      setErrors({ submit: 'Failed to create account' });
+      const errorMessage = err.message || 'Failed to create account';
+      setErrors({ 
+        submit: errorMessage.includes('already exists') 
+          ? 'An account with this email already exists' 
+          : errorMessage });
+      setIsLoading(false);
     } finally {
       setIsLoading(false);
     }
@@ -101,40 +103,20 @@ export default function SignUpClient() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
             <div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    type="text"
-                    autoComplete="given-name"
-                    required
-                    value={form.firstName}
-                    onChange={handleChange}
-                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
-                    placeholder="John"
-                    aria-invalid={!!errors.firstName}
-                  />
-                  {errors.firstName && <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>}
-                </div>
-                <div>
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    name="lastName"
-                    type="text"
-                    autoComplete="family-name"
-                    required
-                    value={form.lastName}
-                    onChange={handleChange}
-                    className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
-                    placeholder="Smith"
-                    aria-invalid={!!errors.lastName}
-                  />
-                  {errors.lastName && <p className="mt-1 text-sm text-red-500">{errors.lastName}</p>}
-                </div>
-              </div>
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                autoComplete="name"
+                required
+                value={form.name}
+                onChange={handleChange}
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+                placeholder="John Smith"
+                aria-invalid={!!errors.name}
+              />
+              {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
             </div>
 
             <div>

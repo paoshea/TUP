@@ -2,6 +2,9 @@ export interface User {
   id: string;
   email: string;
   name?: string;
+  farm?: string;
+  location?: string;
+  role?: string;
 }
 
 export interface AuthResponse {
@@ -27,13 +30,19 @@ export const auth = {
     return response.json();
   },
 
-  async signUp(email: string, password: string, name?: string): Promise<AuthResponse> {
+  async signUp(
+    email: string,
+    password: string,
+    name?: string,
+    farm?: string,
+    location?: string
+  ): Promise<AuthResponse> {
     const response = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({ email, password, name, farm, location }),
     });
 
     if (!response.ok) {

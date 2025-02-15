@@ -7,14 +7,22 @@ interface User {
   email: string;
   password: string;
   name?: string;
+  farm?: string;
+  location?: string;
   createdAt: Date;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name } = await request.json();
+    let client;
+    try {
+      client = await clientPromise;
+    } catch (error) {
+      console.error('MongoDB connection error:', error);
+      return NextResponse.json({ error: 'Database connection failed' }, { status: 503 });
+    }
 
-    const client = await clientPromise;
+    const { email, password, name, farm, location } = await request.json();
     const db = client.db();
 
     // Check if user already exists
@@ -34,6 +42,8 @@ export async function POST(request: NextRequest) {
       email,
       password: hashedPassword,
       name,
+      farm,
+      location,
       createdAt: new Date(),
     });
 
@@ -49,11 +59,16 @@ export async function POST(request: NextRequest) {
         id: result.insertedId.toString(),
         email,
         name,
+        farm,
+        location,
       },
       token,
     });
   } catch (error) {
     console.error('Sign up error:', error);
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json(
       { error: 'Failed to sign up' },
       { status: 500 }

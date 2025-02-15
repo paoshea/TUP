@@ -1,8 +1,17 @@
 import { MongoClient } from 'mongodb';
 
-// In development, use a local MongoDB instance if no URI is provided
-const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/livestock';
-const options = {};
+if (!process.env.MONGODB_URI) {
+  throw new Error('Please add your MongoDB URI to .env.local');
+}
+
+const uri = process.env.MONGODB_URI;
+const options = {
+  maxPoolSize: 10,
+  serverSelectionTimeoutMS: 10000,
+  socketTimeoutMS: 60000,
+  connectTimeoutMS: 10000,
+  retryWrites: true,
+};
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;

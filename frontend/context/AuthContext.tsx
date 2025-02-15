@@ -2,15 +2,16 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { storage } from '@/services/storage';
+import { auth } from '@/services/auth';
 import type { AnalyticsAction } from '@/services/storage';
 
 interface User {
   id: string;
-  name: string;
   email: string;
-  farm: string;
-  location: string;
-  role: string;
+  name?: string;
+  farm?: string;
+  location?: string;
+  role?: string;
   memberSince: string;
 }
 
@@ -42,23 +43,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, _password: string) => {
+  const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const storedUser = storage.getUser();
-      
-      if (storedUser?.email === email) {
-        storage.updateAnalytics({
-          actions: [{
-            type: 'login',
-            timestamp: new Date().toISOString(),
-          } as AnalyticsAction]
-        });
-        // Any password works at this stage
-        setUser(storedUser);
-      } else {
-        throw new Error('User not found');
-      }
+      const response = await auth.signIn(email, password);
+      setUser(response.user as User);
+      storage.setUser(response.user as User);
     } catch (error) {
       console.error('Login failed:', error);
       throw new Error('Invalid email or password');
@@ -70,11 +60,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signup = async ({ password, ...userData }: SignupData) => {
     try {
       setIsLoading(true);
-
-      // Initialize empty collections
-      storage.setAnimals([]);
-      storage.setShows([]);
-      storage.setEvaluations([]);
+      const response = await auth.signUp(
+        userData.email,
+        password,
+        userData.name,
+        userData.farm,
+        userData.location
+      );
 
       // Initialize analytics
       storage.updateAnalytics({
@@ -86,14 +78,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } as AnalyticsAction]
       });
 
-      // Create new user
       const newUser: User = {
-        id: `user-${Date.now()}`,
-        role: 'user',
+        ...response.user,
+        role: response.user.role || 'user',
         memberSince: new Date().toISOString(),
-        ...userData,
       };
 
+      // Store the user data
       storage.setUser(newUser);
       setUser(newUser);
     } catch (error) {
