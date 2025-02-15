@@ -12,24 +12,44 @@ interface User {
   createdAt: Date;
 }
 
+function validateSignupInput(data: any) {
+  const errors: string[] = [];
+
+  if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+    errors.push('Valid email is required');
+  }
+
+  if (!data.password || data.password.length < 8) {
+    errors.push('Password must be at least 8 characters');
+  }
+
+  if (!data.name || data.name.trim().length === 0) {
+    errors.push('Name is required');
+  }
+
+  return errors;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    let client;
-    try {
-      client = await clientPromise;
-    } catch (error) {
-      console.error('MongoDB connection error:', error);
-      return NextResponse.json({ error: 'Database connection failed' }, { status: 503 });
+    // Parse request body
+    const { email, password, name, farm, location } = await request.json();
+    
+    // Validate input
+    const validationErrors = validateSignupInput({ email, password, name });
+    if (validationErrors.length > 0) {
+      return NextResponse.json({ error: validationErrors.join(', ') }, { status: 400 });
     }
 
-    const { email, password, name, farm, location } = await request.json();
+    // Connect to MongoDB
+    const client = await clientPromise;
     const db = client.db();
 
     // Check if user already exists
     const existingUser = await db.collection('users').findOne({ email });
     if (existingUser) {
       return NextResponse.json(
-        { error: 'User already exists' },
+        { error: 'An account with this email already exists' },
         { status: 400 }
       );
     }
@@ -47,13 +67,17 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
     });
 
-    // Generate token
+    // Generate JWT token
     const token = sign(
-      { userId: result.insertedId.toString(), email },
+      { 
+        userId: result.insertedId.toString(),
+        email 
+      },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );
 
+    // Return success response
     return NextResponse.json({
       user: {
         id: result.insertedId.toString(),
@@ -66,11 +90,21 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Sign up error:', error);
+    
+    // Handle specific error types
     if (error instanceof Error) {
+      if (error.message.includes('MongoDB')) {
+        return NextResponse.json(
+          { error: 'Database connection failed. Please try again later.' },
+          { status: 503 }
+        );
+      }
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
+
+    // Generic error response
     return NextResponse.json(
-      { error: 'Failed to sign up' },
+      { error: 'Failed to create account. Please try again.' },
       { status: 500 }
     );
   }

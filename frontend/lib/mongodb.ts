@@ -6,11 +6,12 @@ if (!process.env.MONGODB_URI) {
 
 const uri = process.env.MONGODB_URI;
 const options = {
-  maxPoolSize: 10,
-  serverSelectionTimeoutMS: 10000,
+  maxPoolSize: parseInt(process.env.MONGODB_MAX_POOL_SIZE || '10'),
+  serverSelectionTimeoutMS: parseInt(process.env.MONGODB_CONNECT_TIMEOUT || '10000'),
   socketTimeoutMS: 60000,
-  connectTimeoutMS: 10000,
+  connectTimeoutMS: parseInt(process.env.MONGODB_CONNECT_TIMEOUT || '10000'),
   retryWrites: true,
+  dbName: process.env.MONGODB_DB_NAME || 'livestock',
 };
 
 let client: MongoClient;
@@ -27,7 +28,7 @@ if (process.env.NODE_ENV === 'development') {
   if (!global._mongoClientPromise) {
     client = new MongoClient(uri, options);
     global._mongoClientPromise = client.connect()
-      .catch(error => {
+      .catch((error: Error) => {
         console.error('Failed to connect to MongoDB:', error);
         throw error;
       });
@@ -37,7 +38,7 @@ if (process.env.NODE_ENV === 'development') {
   // In production mode, it's best to not use a global variable.
   client = new MongoClient(uri, options);
   clientPromise = client.connect()
-    .catch(error => {
+    .catch((error: Error) => {
       console.error('Failed to connect to MongoDB:', error);
       throw error;
     });
