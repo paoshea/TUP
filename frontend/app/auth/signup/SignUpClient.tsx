@@ -26,13 +26,13 @@ export default function SignUpClient() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrors({});
-    setIsLoading(true);
 
     // Validate form
     const newErrors: Record<string, string> = {};
     if (!form.email) newErrors.email = 'Email is required';
     if (!form.name) newErrors.name = 'Name is required';
     if (!form.password) newErrors.password = 'Password is required';
+    if (form.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
     if (!form.confirmPassword) newErrors.confirmPassword = 'Please confirm your password';
     else if (form.password !== form.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
@@ -44,6 +44,8 @@ export default function SignUpClient() {
       setIsLoading(false);
       return;
     }
+    
+    setIsLoading(true);
     
     try {
       await signup({
