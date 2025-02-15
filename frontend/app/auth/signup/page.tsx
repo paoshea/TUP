@@ -1,4 +1,4 @@
-import SignUpClient from '@/app/auth/signup/SignUpClient';
+import SignUpClient from './SignUpClient';
 
 // Prevent static generation for auth pages
 export const dynamic = 'force-dynamic';

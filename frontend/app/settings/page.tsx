@@ -1,4 +1,4 @@
-import SettingsClient from '@/app/settings/SettingsClient';
+import SettingsClient from './SettingsClient';
 
 // Prevent static generation for settings page
 export const dynamic = 'force-dynamic';
