@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { anthropicService, type AnthropicResponse } from '@/services/anthropic.service';
 import logger from '@/lib/logger';
+import { X } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -169,10 +170,10 @@ export function WizardPhil({ isOpen = false, onOpenChange, initialMessage }: Wiz
           <h2 className="text-lg font-semibold">WizardPhil</h2>
           <button 
             onClick={handleClose}
-            className="p-2 hover:bg-gray-100 rounded-full"
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             aria-label="Close"
           >
-            ✕
+            <X className="h-5 w-5 text-gray-500 hover:text-gray-700" />
           </button>
         </div>
         <p className="text-sm text-gray-500">Your AI-powered livestock show assistant</p>
