@@ -1,14 +1,21 @@
 "use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { WizardPhil } from '@/components/features/ai';
-import { Progress } from '@/components/ui/progress';
-import { Card } from '@/components/ui/card';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { mockStore } from '@/lib/mock/store';
 import { AnimalDemo, EvaluationDemo, ShowDemo, AnalyticsDemo } from './components';
-import { DemoContent } from './components/DemoContent';
-import type { DemoStep } from './types';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import Link from 'next/link';
+
+interface DemoStep {
+  id: string;
+  title: string;
+  description: string;
+  component: JSX.Element;
+  action?: () => Promise<void>;
+}
 
 const demoSteps: DemoStep[] = [
   {
@@ -42,47 +49,19 @@ const demoSteps: DemoStep[] = [
 ];
 
 export default function DemoPage() {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState(demoSteps[0].id);
+  const router = useRouter();
+  const currentUser = mockStore.getCurrentUser();
 
-  const handleDemoAction = async () => {
-    setIsProcessing(true);
-    setProgress(0);
-
-    try {
-      const step = demoSteps[currentStep];
-      
-      // Simulate progress
-      for (let i = 0; i <= 100; i += 10) {
-        setProgress(i);
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-
-      // Load demo data for current step
-      if (step.action) {
-        await step.action();
-      }
-
-      // Mark step as completed
-      setCompletedSteps(prev => [...prev, step.id]);
-
-      // Move to next step if available
-      if (currentStep < demoSteps.length - 1) {
-        setCurrentStep(prev => prev + 1);
-        setActiveTab(demoSteps[currentStep + 1].id);
-      }
-    } catch (error) {
-      console.error('Demo action failed:', error);
-    } finally {
-      setIsProcessing(false);
-      setProgress(0);
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (currentUser) {
+      router.push('/dashboard');
     }
-  };
+  }, [currentUser, router]);
 
-  const currentStepData = demoSteps[currentStep];
+  if (currentUser) {
+    return null;
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -97,95 +76,54 @@ export default function DemoPage() {
             walk you through the key features of our platform.
           </p>
 
-          {/* Progress Overview */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">Your Progress</h2>
-            <div className="grid grid-cols-4 gap-2">
-              {demoSteps.map((step, index) => (
-                <div
-                  key={step.id}
-                  className={`h-2 rounded ${
-                    completedSteps.includes(step.id)
-                      ? 'bg-primary'
-                      : index === currentStep
-                      ? 'bg-primary/50'
-                      : 'bg-gray-200'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Current Step */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold">{currentStepData.title}</h3>
-              <span className="text-sm text-gray-500">
-                Step {currentStep + 1} of {demoSteps.length}
-              </span>
-            </div>
-            <p className="text-gray-600">{currentStepData.description}</p>
-
-            <Button
-              onClick={handleDemoAction}
-              disabled={isProcessing}
-              className="w-full"
-            >
-              {isProcessing ? 'Loading...' : `Explore ${currentStepData.title}`}
-            </Button>
-
-            {isProcessing && (
-              <Progress value={progress} className="w-full" />
-            )}
+          <div className="flex justify-center space-x-4">
+            <Link href="/auth/signup">
+              <Button size="lg">
+                Create Free Account
+              </Button>
+            </Link>
+            <Link href="/auth/signin">
+              <Button variant="outline" size="lg">
+                Sign In
+              </Button>
+            </Link>
           </div>
         </Card>
 
-        {/* Feature Demo Area */}
-        <Card className="p-6">
-          <div className="space-y-4">
-            {/* Step Navigation */}
-            <div className="grid grid-cols-4 gap-2">
-              {demoSteps.map((step) => (
-                <button
-                  key={step.id}
-                  onClick={() => setActiveTab(step.id)}
-                  disabled={!completedSteps.includes(step.id)}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors
-                    ${
-                      activeTab === step.id
-                        ? 'bg-primary text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }
-                    ${
-                      !completedSteps.includes(step.id)
-                        ? 'opacity-50 cursor-not-allowed'
-                        : ''
-                    }
-                  `}
-                >
-                  {step.title}
-                </button>
-              ))}
-            </div>
+        {/* Feature Previews */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {demoSteps.map((step) => (
+            <Card key={step.id} className="p-6">
+              <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
+              <p className="text-gray-600 mb-4">{step.description}</p>
+              <Link href="/auth/signup">
+                <Button variant="outline" className="w-full">
+                  Try {step.title}
+                </Button>
+              </Link>
+            </Card>
+          ))}
+        </div>
 
-            {/* Step Content */}
-            <div className="mt-4">
-              {demoSteps.map((step) => (
-                <DemoContent
-                  key={step.id}
-                  isActive={activeTab === step.id}
-                >
-                  {step.component}
-                </DemoContent>
-              ))}
-            </div>
+        {/* Call to Action */}
+        <Card className="p-6 text-center">
+          <h2 className="text-2xl font-semibold mb-4">Ready to Get Started?</h2>
+          <p className="text-gray-600 mb-6">
+            Create your free account now and unlock all features of TUP Assistant.
+          </p>
+          <div className="flex justify-center space-x-4">
+            <Link href="/auth/signup">
+              <Button size="lg">
+                Create Free Account
+              </Button>
+            </Link>
+            <Link href="/pricing">
+              <Button variant="outline" size="lg">
+                View Pricing
+              </Button>
+            </Link>
           </div>
         </Card>
-
-        {/* AI Assistant */}
-        <WizardPhil
-          initialMessage={`Hi! I'm WizardPhil, your AI assistant. Let me guide you through ${currentStepData.title}. Feel free to ask any questions!`}
-        />
       </div>
     </div>
   );

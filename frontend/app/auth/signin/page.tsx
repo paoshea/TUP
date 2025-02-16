@@ -1,18 +1,30 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import type { Route } from 'next';
+import { mockStore } from '@/lib/mock/store';
 
 export default function SignInPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const currentUser = mockStore.getCurrentUser();
+
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (currentUser) {
+      router.push('/dashboard');
+    }
+  }, [currentUser, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    setSuccess(false);
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -20,14 +32,27 @@ export default function SignInPage() {
     const password = formData.get('password') as string;
 
     try {
-      // TODO: Implement authentication
-      console.log('Sign in:', { email, password });
+      // Sign in the user
+      await mockStore.signIn({ email, password });
+
+      // Show success message
+      setSuccess(true);
+
+      // Redirect after a short delay
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1500);
     } catch (err) {
-      setError('Invalid email or password');
+      setError(err instanceof Error ? err.message : 'Sign in failed');
+      setSuccess(false);
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (currentUser) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -39,7 +64,7 @@ export default function SignInPage() {
           <p className="mt-2 text-center text-sm text-gray-600">
             Or{' '}
             <Link
-              href={'/auth/signup' as Route}
+              href="/auth/signup"
               className="font-medium text-primary hover:text-primary/90"
             >
               create a new account
@@ -94,7 +119,7 @@ export default function SignInPage() {
 
             <div className="text-sm">
               <Link
-                href={'/auth/forgot-password' as Route}
+                href="/auth/forgot-password"
                 className="font-medium text-primary hover:text-primary/90"
               >
                 Forgot your password?
@@ -105,6 +130,12 @@ export default function SignInPage() {
           {error && (
             <div className="text-red-500 text-sm text-center">
               {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="text-green-500 text-sm text-center">
+              Signed in successfully! Redirecting...
             </div>
           )}
 
@@ -133,14 +164,16 @@ export default function SignInPage() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => console.log('Google sign in')}
+              onClick={() => mockStore.signInWithProvider('google')}
+              disabled={isLoading}
             >
               Google
             </Button>
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => console.log('Apple sign in')}
+              onClick={() => mockStore.signInWithProvider('apple')}
+              disabled={isLoading}
             >
               Apple
             </Button>

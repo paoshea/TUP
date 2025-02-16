@@ -1,18 +1,30 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import type { Route } from 'next';
+import { mockStore } from '@/lib/mock/store';
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const currentUser = mockStore.getCurrentUser();
+
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (currentUser) {
+      router.push('/dashboard');
+    }
+  }, [currentUser, router]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    setSuccess(false);
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -20,20 +32,43 @@ export default function SignUpPage() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     const confirmPassword = formData.get('confirm-password') as string;
+    const terms = formData.get('terms') as string;
 
     try {
+      // Validate form
+      if (!terms) {
+        throw new Error('Please accept the Terms of Service and Privacy Policy');
+      }
+
       if (password !== confirmPassword) {
         throw new Error('Passwords do not match');
       }
 
-      // TODO: Implement registration
-      console.log('Sign up:', { name, email, password });
+      if (password.length < 8) {
+        throw new Error('Password must be at least 8 characters long');
+      }
+
+      // Register the user
+      await mockStore.register({ name, email, password });
+
+      // Show success message
+      setSuccess(true);
+
+      // Redirect after a short delay
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
+      setSuccess(false);
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (currentUser) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -45,7 +80,7 @@ export default function SignUpPage() {
           <p className="mt-2 text-center text-sm text-gray-600">
             Already have an account?{' '}
             <Link
-              href={'/auth/signin' as Route}
+              href="/auth/signin"
               className="font-medium text-primary hover:text-primary/90"
             >
               Sign in
@@ -93,6 +128,7 @@ export default function SignUpPage() {
                 type="password"
                 autoComplete="new-password"
                 required
+                minLength={8}
                 className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                 placeholder="••••••••"
               />
@@ -107,6 +143,7 @@ export default function SignUpPage() {
                 type="password"
                 autoComplete="new-password"
                 required
+                minLength={8}
                 className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                 placeholder="••••••••"
               />
@@ -124,14 +161,14 @@ export default function SignUpPage() {
             <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
               I agree to the{' '}
               <Link
-                href={'/terms' as Route}
+                href="/terms"
                 className="font-medium text-primary hover:text-primary/90"
               >
                 Terms of Service
               </Link>
               {' '}and{' '}
               <Link
-                href={'/privacy' as Route}
+                href="/privacy"
                 className="font-medium text-primary hover:text-primary/90"
               >
                 Privacy Policy
@@ -142,6 +179,12 @@ export default function SignUpPage() {
           {error && (
             <div className="text-red-500 text-sm text-center">
               {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="text-green-500 text-sm text-center">
+              Account created successfully! Redirecting...
             </div>
           )}
 
@@ -170,14 +213,16 @@ export default function SignUpPage() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => console.log('Google sign up')}
+              onClick={() => mockStore.signInWithProvider('google')}
+              disabled={isLoading}
             >
               Google
             </Button>
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => console.log('Apple sign up')}
+              onClick={() => mockStore.signInWithProvider('apple')}
+              disabled={isLoading}
             >
               Apple
             </Button>
