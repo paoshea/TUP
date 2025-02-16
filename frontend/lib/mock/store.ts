@@ -29,6 +29,36 @@ class MockStore {
     this.evaluations = generateEvaluations(this.animals);
   }
 
+  // Demo data loading methods
+  async loadDemoAnimals(): Promise<void> {
+    this.animals = generateAnimals().slice(0, 5); // Load subset for demo
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading
+  }
+
+  async loadDemoEvaluations(): Promise<void> {
+    this.evaluations = generateEvaluations(this.animals).slice(0, 3);
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  async loadDemoShows(): Promise<void> {
+    this.shows = generateShows().slice(0, 2);
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  async loadDemoAnalytics(): Promise<void> {
+    this.statistics = generateStatistics();
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  async loadDemoData(): Promise<void> {
+    await Promise.all([
+      this.loadDemoAnimals(),
+      this.loadDemoEvaluations(),
+      this.loadDemoShows(),
+      this.loadDemoAnalytics()
+    ]);
+  }
+
   // Animal methods
   getAnimals(): Animal[] {
     return this.animals;

@@ -1,39 +1,42 @@
 export interface Animal {
   id: string;
   name: string;
+  category: string;
   breed: string;
-  age?: number;
-  status: string;
-  registrationNumber?: string;
-  birthDate?: string;
-  images: string[];
-  scores: {
-    movement: number;
-    conformation: number;
-    muscleDevelopment: number;
-    breedCharacteristics: number;
-  };
+  region: string;
   notes?: string;
-  lastEvaluation?: string;
-  category?: string;
-  region?: string;
+  images?: string[];
+  scores: Record<string, number>;
 }
 
-export interface Evaluation {
+export interface Region {
+  name: string;
+  description: string;
+  characteristics: string[];
+  notableFlocks: string[];
+}
+
+export interface ChecklistItem {
   id: string;
-  animalId: string;
-  animalName: string;
-  date: string;
-  scores: {
-    movement: number;
-    conformation: number;
-    muscleDevelopment: number;
-    breedCharacteristics: number;
-  };
-  notes?: string;
-  images: string[];
-  evaluator: string;
-  overallScore: number;
+  title: string;
+  description: string;
+  completed: boolean;
+  category: string;
+}
+
+export interface Statistics {
+  totalAnimals: number;
+  totalEvaluations: number;
+  averageScores: Record<string, number>;
+  regionalBreakdown: Record<string, number>;
+  breedDistribution: Record<string, number>;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'user' | 'admin';
 }
 
 export interface Show {
@@ -41,67 +44,41 @@ export interface Show {
   name: string;
   date: string;
   location: string;
-  status: string;
-  entryCount: number;
+  status: 'upcoming' | 'completed' | 'cancelled';
   categories: string[];
-  description: string;
-  entryFee: number;
-  maxEntries: number;
-  registrationDeadline: string;
-  judgingCriteria: string[];
+  entries?: ShowEntry[];
 }
 
-export interface Region {
-  name: string;
-  areas: string[];
-  characteristics: string[];
-  historicalData: string;
-  showStats: {
-    participationRate: number;
-    averageScore: number;
-    topBreeds: string[];
-  };
-}
-
-export interface ChecklistItem {
+export interface ShowEntry {
   id: string;
-  text: string;
-  completed: boolean;
+  showId: string;
+  animalId: string;
   category: string;
-  dueDate: string;
-  assignedTo: string;
+  placement?: number;
+  score?: number;
 }
 
-export interface Statistics {
-  totalAnimals: number;
-  upcomingShows: number;
-  completedEvaluations: number;
-  activeUsers: number;
-  averageScores: {
-    movement: number;
-    conformation: number;
-    muscleDevelopment: number;
-    breedCharacteristics: number;
-  };
-  showParticipation: {
-    registered: number;
-    upcoming: number;
-    completed: number;
-  };
-  evaluationTrends: {
-    lastMonth: number;
-    lastQuarter: number;
-    lastYear: number;
-  };
+export interface EvaluationMetadata {
+  location?: string;
+  weather?: string;
+  surfaceType?: string;
+  evaluatorNotes?: string;
 }
 
-export interface User {
+export interface Evaluation {
   id: string;
-  name: string;
-  email: string;
-  role: string;
-  avatar: string;
-  farm: string;
-  location: string;
-  memberSince: string;
+  animalId: string;
+  evaluatorId: string;
+  scores: Record<string, number>;
+  notes?: string;
+  metadata?: EvaluationMetadata;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DemoData {
+  animals: Animal[];
+  evaluations: Evaluation[];
+  shows: Show[];
+  statistics: Statistics;
 }
